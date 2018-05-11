@@ -277,6 +277,28 @@ int start_vm(struct vm *vm)
 	return 0;
 }
 
+int reset_vm(struct vm *vm)
+{
+	int i;
+	struct vcpu *vcpu = NULL;
+
+	if (vm->state != VM_PAUSED)
+		return -1;
+
+	foreach_vcpu(i, vm, vcpu) {
+		reset_vcpu(vcpu);
+		if (is_vcpu_bsp(vcpu))
+			vm_sw_loader(vm, vcpu);
+
+		vcpu->arch_vcpu.cpu_mode = CPU_MODE_REAL;
+	}
+
+	vioapic_reset(vm->arch_vm.virt_ioapic);
+
+	start_vm(vm);
+	return 0;
+}
+
 /*
  * DM only pause vm for shutdown/reboot. If we need to
  * extend the pause vm for DM, this API should be extended.
