@@ -99,6 +99,7 @@ int	vm_get_device_fd(struct vmctx *ctx);
 struct	vmctx *vm_open(const char *name);
 void	vm_close(struct vmctx *ctx);
 void	vm_pause(struct vmctx *ctx);
+void	vm_reset(struct vmctx *ctx);
 int	vm_set_shared_io_page(struct vmctx *ctx, uint64_t page_vma);
 int	vm_create_ioreq_client(struct vmctx *ctx);
 int	vm_destroy_ioreq_client(struct vmctx *ctx);
@@ -107,6 +108,7 @@ int	vm_notify_request_done(struct vmctx *ctx, int vcpu);
 void	vm_set_suspend_mode(enum vm_suspend_how how);
 int	vm_get_suspend_mode(void);
 void	vm_destroy(struct vmctx *ctx);
+void	vm_deinit_trusty(struct vmctx *ctx);
 int	vm_parse_memsize(const char *optarg, size_t *memsize);
 int	vm_map_memseg_vma(struct vmctx *ctx, size_t len, vm_paddr_t gpa,
 	uint64_t vma, int prot);

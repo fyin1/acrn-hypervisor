@@ -533,6 +533,39 @@ vm_reset_vdevs(struct vmctx *ctx)
 }
 
 static void
+vm_system_reboot(struct vmctx *ctx)
+{
+	int vcpu_id = 0;
+
+	/*
+	 * If we get warm reboot request, we don't want to exit the
+	 * vcpu_loop/vm_loop/mevent_loop. So we do:
+	 *   1. pause VM
+	 *   2. deinitialize all virtual devices
+	 *   3. notify request done to reset ioreq state in vhm
+	 *   4. hypercall reset vm
+	 *   5. reset suspend mode to VM_SUSPEND_NONE
+	 */
+
+	vm_pause(ctx);
+	for (vcpu_id = 0; vcpu_id < 4; vcpu_id++) {
+		struct vhm_request *vhm_req;
+
+		vhm_req = &vhm_req_buf[vcpu_id];
+		if (vhm_req->valid &&
+			(vhm_req->processed == REQ_STATE_PROCESSING) &&
+			(vhm_req->client == ctx->ioreq_client))
+			vm_notify_request_done(ctx, vcpu_id);
+	}
+
+	vm_reset_vdevs(ctx);
+
+	acrn_sw_load(ctx);
+	vm_reset(ctx);
+	vm_set_suspend_mode(VM_SUSPEND_NONE);
+}
+
+static void
 vm_loop(struct vmctx *ctx)
 {
 	int error;
@@ -544,19 +577,23 @@ vm_loop(struct vmctx *ctx)
 	assert(error == 0);
 
 	while (1) {
-		int vcpu;
+		int vcpu_id;
 		struct vhm_request *vhm_req;
 
 		error = vm_attach_ioreq_client(ctx);
 		if (error)
 			break;
 
-		for (vcpu = 0; vcpu < 4; vcpu++) {
-			vhm_req = &vhm_req_buf[vcpu];
+		for (vcpu_id = 0; vcpu_id < 4; vcpu_id++) {
+			vhm_req = &vhm_req_buf[vcpu_id];
 			if (vhm_req->valid
 				&& (vhm_req->processed == REQ_STATE_PROCESSING)
 				&& (vhm_req->client == ctx->ioreq_client))
-				handle_vmexit(ctx, vhm_req, vcpu);
+				handle_vmexit(ctx, vhm_req, vcpu_id);
+		}
+
+		if (VM_SUSPEND_SYSTEM_RESET == vm_get_suspend_mode()) {
+			vm_system_reboot(ctx);
 		}
 	}
 	quit_vm_loop = 0;
