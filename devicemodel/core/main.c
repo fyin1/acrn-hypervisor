@@ -59,6 +59,7 @@
 #include "sw_load.h"
 #include "monitor.h"
 #include "ioc.h"
+#include "pm.h"
 
 #define GUEST_NIO_PORT		0x488	/* guest upcalls via i/o port */
 
@@ -566,6 +567,37 @@ vm_system_reboot(struct vmctx *ctx)
 }
 
 static void
+vm_suspend_resume(struct vmctx *ctx)
+{
+	int vcpu_id = 0;
+
+	/*
+	 * If we get warm reboot request, we don't want to exit the
+	 * vcpu_loop/vm_loop/mevent_loop. So we do:
+	 *   1. pause VM
+	 *   2. notify request done to reset ioreq state in vhm
+	 *   3. wait for resume signal
+	 *   4. reset virtual devices
+	 *   5. hypercall restart vm
+	 */
+	vm_pause(ctx);
+	for (vcpu_id = 0; vcpu_id < 4; vcpu_id++) {
+		struct vhm_request *vhm_req;
+
+		vhm_req = &vhm_req_buf[vcpu_id];
+		if (vhm_req->valid &&
+			(vhm_req->processed == REQ_STATE_PROCESSING) &&
+			(vhm_req->client == ctx->ioreq_client))
+			vm_notify_request_done(ctx, vcpu_id);
+	}
+
+	wait_for_resume(ctx);
+
+	vm_reset_vdevs(ctx);
+	vm_reset(ctx);
+}
+
+static void
 vm_loop(struct vmctx *ctx)
 {
 	int error;
@@ -594,6 +626,10 @@ vm_loop(struct vmctx *ctx)
 
 		if (VM_SUSPEND_SYSTEM_RESET == vm_get_suspend_mode()) {
 			vm_system_reboot(ctx);
+		}
+
+		if (VM_SUSPEND_SUSPEND == vm_get_suspend_mode()) {
+			vm_suspend_resume(ctx);
 		}
 	}
 	quit_vm_loop = 0;
