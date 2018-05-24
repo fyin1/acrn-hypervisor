@@ -593,6 +593,7 @@ vm_suspend_resume(struct vmctx *ctx)
 
 	wait_for_resume(ctx);
 
+	pm_backto_wakeup(ctx);
 	vm_reset_vdevs(ctx);
 	vm_reset(ctx);
 }
