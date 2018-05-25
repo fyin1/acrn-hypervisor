@@ -519,6 +519,24 @@ void save_sworld_context(struct vcpu *vcpu)
 			sizeof(struct run_context));
 }
 
+void restore_sworld_context(struct vcpu *vcpu)
+{
+	struct secure_world_control *sworld_ctl =
+		&vcpu->vm->sworld_control;
+	struct secure_world_save_area *save_area =
+		&vcpu->vm->sworld_save_area;
+
+	create_secure_world_ept(vcpu->vm,
+				sworld_ctl->sworld_memory.base_gpa_in_uos,
+				sworld_ctl->sworld_memory.length,
+				TRUSTY_EPT_REBASE_GPA);
+
+	memcpy_s(&vcpu->arch_vcpu.contexts[SECURE_WORLD],
+			sizeof(struct run_context),
+			&save_area->saved_ctx,
+			sizeof(struct run_context));
+}
+
 /**
  * @}
  */ // End of trusty_apis

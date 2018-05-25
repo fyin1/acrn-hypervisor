@@ -388,6 +388,15 @@ int64_t hcall_initialize_trusty(struct vcpu *vcpu, uint64_t param);
 int64_t hcall_save_sworld_context(struct vcpu *vcpu);
 
 /**
+ * @brief Restore Context of Secure World.
+ *
+ * @param vcpu Pointer to VCPU data structure
+ *
+ * @return 0 on success, non-zero on error.
+ */
+int64_t hcall_restore_sworld_context(struct vcpu *vcpu);
+
+/**
  * @}
  */ // End of trusty_hypercall
 
