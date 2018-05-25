@@ -35,7 +35,8 @@ int vmcall_vmexit_handler(struct vcpu *vcpu)
 	}
 
 	if (!is_vm0(vm) && hypcall_id != HC_WORLD_SWITCH &&
-		hypcall_id != HC_INITIALIZE_TRUSTY) {
+		hypcall_id != HC_INITIALIZE_TRUSTY &&
+		hypcall_id != HC_SAVE_SWORLD_CONTEXT) {
 		pr_err("hypercall %d is only allowed from VM0!\n", hypcall_id);
 		goto out;
 	}
@@ -144,6 +145,10 @@ int vmcall_vmexit_handler(struct vcpu *vcpu)
 
 	case HC_PM_GET_CPU_STATE:
 		ret = hcall_get_cpu_pm_state(vm, param1, param2);
+		break;
+
+	case HC_SAVE_SWORLD_CONTEXT:
+		ret = hcall_save_sworld_context(vcpu);
 		break;
 
 	default:

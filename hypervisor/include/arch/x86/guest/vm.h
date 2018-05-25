@@ -152,6 +152,7 @@ struct vm {
 
 	unsigned char GUID[16];
 	struct secure_world_control sworld_control;
+	struct secure_world_save_area sworld_save_area;
 
 	uint32_t vcpuid_entry_nr, vcpuid_level, vcpuid_xlevel;
 	struct vcpuid_entry vcpuid_entries[MAX_VM_VCPUID_ENTRIES];

@@ -71,6 +71,7 @@
 #define HC_INITIALIZE_TRUSTY        _HC_ID(HC_ID, HC_ID_TRUSTY_BASE + 0x00UL)
 #define HC_WORLD_SWITCH             _HC_ID(HC_ID, HC_ID_TRUSTY_BASE + 0x01UL)
 #define HC_GET_SEC_INFO             _HC_ID(HC_ID, HC_ID_TRUSTY_BASE + 0x02UL)
+#define HC_SAVE_SWORLD_CONTEXT      _HC_ID(HC_ID, HC_ID_TRUSTY_BASE + 0x03UL)
 
 /* Power management */
 #define HC_ID_PM_BASE               0x80UL

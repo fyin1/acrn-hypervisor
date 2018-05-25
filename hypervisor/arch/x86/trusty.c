@@ -508,6 +508,17 @@ void trusty_set_dseed(void *dseed, uint8_t dseed_num)
 			dseed, sizeof(struct seed_info) * dseed_num);
 }
 
+void save_sworld_context(struct vcpu *vcpu)
+{
+	struct secure_world_save_area *save_area =
+		&vcpu->vm->sworld_save_area;
+
+	memcpy_s(&save_area->saved_ctx,
+			sizeof(struct run_context),
+			&vcpu->arch_vcpu.contexts[SECURE_WORLD],
+			sizeof(struct run_context));
+}
+
 /**
  * @}
  */ // End of trusty_apis
