@@ -163,9 +163,9 @@ struct vm_description {
 	 */
 	int                    *vm_hw_logical_core_ids;
 	unsigned char          GUID[16]; /* GUID of the vm will be created */
-	int                    vm_hw_num_cores;   /* Number of virtual cores */
-	/* Whether secure world is enabled for current VM. */
-	bool                   sworld_enabled;
+	uint16_t               vm_hw_num_cores;   /* Number of virtual cores */
+	/* Whether secure world is supported for current VM. */
+	bool                   sworld_supported;
 };
 
 int shutdown_vm(struct vm *vm);
