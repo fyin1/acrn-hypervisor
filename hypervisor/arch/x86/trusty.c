@@ -212,19 +212,23 @@ static void create_secure_world_ept(struct vm *vm, uint64_t gpa_orig,
 	}
 }
 
-void  destroy_secure_world(struct vm *vm)
+void  destroy_secure_world(struct vm *vm, bool need_clr_mem)
 {
+	int i;
 	struct map_params  map_params;
 	struct vm *vm0 = get_vm_from_vmid(0);
+	struct vcpu *vcpu;
 
 	if (vm0 == NULL) {
 		pr_err("Parse vm0 context failed.");
 		return;
 	}
 
-	/* clear trusty memory space */
-	(void)memset(HPA2HVA(vm->sworld_control.sworld_memory.base_hpa),
-			0, vm->sworld_control.sworld_memory.length);
+	if (need_clr_mem) {
+		/* clear trusty memory space */
+		(void)memset(HPA2HVA(vm->sworld_control.sworld_memory.base_hpa),
+				0, vm->sworld_control.sworld_memory.length);
+	}
 
 	/* restore memory to SOS ept mapping */
 	map_params.page_table_type = PTT_EPT;
@@ -239,8 +243,27 @@ void  destroy_secure_world(struct vm *vm)
 			 IA32E_EPT_X_BIT |
 			 IA32E_EPT_WB));
 
+	/* Restore memory to guest normal world */
+	map_params.pml4_base = HPA2HVA(vm->arch_vm.nworld_eptp);
+	map_params.pml4_inverted = HPA2HVA(vm->arch_vm.m2p);
+	map_mem(&map_params, (void *)vm->sworld_control.sworld_memory.base_hpa,
+			(void *)vm->sworld_control.sworld_memory.base_gpa_in_uos,
+			vm->sworld_control.sworld_memory.length,
+			(IA32E_EPT_R_BIT |
+			 IA32E_EPT_W_BIT |
+			 IA32E_EPT_X_BIT |
+			 IA32E_EPT_WB));
+
 	/* Free trusty ept page-structures */
 	free_secure_world_ept(vm);
+
+	foreach_vcpu(i, vm, vcpu) {
+		vcpu_make_request(vcpu, ACRN_REQUEST_EPT_FLUSH);
+	}
+	foreach_vcpu(i, vm0, vcpu) {
+		vcpu_make_request(vcpu, ACRN_REQUEST_EPT_FLUSH);
+	}
+
 }
 
 static void save_world_ctx(struct run_context *context)

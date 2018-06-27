@@ -137,7 +137,7 @@ struct trusty_startup_param {
 
 void switch_world(struct vcpu *vcpu, int next_world);
 bool initialize_trusty(struct vcpu *vcpu, uint64_t param);
-void destroy_secure_world(struct vm *vm);
+void destroy_secure_world(struct vm *vm, bool need_clr_mem);
 void save_sworld_context(struct vcpu *vcpu);
 void restore_sworld_context(struct vcpu *vcpu);
 
