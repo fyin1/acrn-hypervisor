@@ -60,6 +60,51 @@ static struct key_info g_key_info = {
  */
 
 /**
+ * @pre TRUSTY_MEMORY_SIZE <= 1G
+ * @pre TRUSTY_EPT_REBASE_GPA 1G aligned
+ */
+void free_secure_world_ept(struct vm *vm)
+{
+	uint32_t pde_idx;
+	uint32_t offset;
+	uint64_t pml4e;
+	uint64_t pdpte;
+	uint64_t pde;
+	void *pml4_addr = NULL;
+
+	/* Obtain secure world eptp */
+	pml4_addr = HPA2HVA(vm->arch_vm.sworld_eptp);
+	if (pml4_addr == NULL) {
+		ASSERT(false, "Trusty eptp is NULL");
+		return;
+	}
+	/* Obtain pml4e and pdpte for trusyt memory */
+	offset = IA32E_PML4E_INDEX_CALC(TRUSTY_EPT_REBASE_GPA);
+	pml4e = mem_read64(pml4_addr + offset);
+	offset = IA32E_PDPTE_INDEX_CALC(TRUSTY_EPT_REBASE_GPA);
+	pdpte = mem_read64((pml4e & IA32E_REF_MASK) + offset);
+	/* No need to free page level 1 and level 2 if 1GB page */
+	if (!(pdpte & IA32E_PDPTE_PS_BIT)) {
+		for (pde_idx = 0U; pde_idx < IA32E_NUM_ENTRIES; pde_idx++) {
+			pde = mem_read64((pdpte & IA32E_REF_MASK)
+					+ (pde_idx * IA32E_COMM_ENTRY_SIZE));
+			/* No need to free level 1 if 2MB page
+			 * or the entry is NULL */
+			if (pde == 0U || (pde & IA32E_PDE_PS_BIT))
+				continue;
+			/* Free page level 1 */
+			free_paging_struct(HPA2HVA(pde & IA32E_REF_MASK));
+		}
+		/* Free page level 2 */
+		free_paging_struct(HPA2HVA(pdpte & IA32E_REF_MASK));
+	}
+	/* Free page level 3 and level 4 for secure world */
+	free_paging_struct(HPA2HVA(pml4e & IA32E_REF_MASK));
+	free_paging_struct(pml4_addr);
+	vm->arch_vm.sworld_eptp = 0UL;
+}
+
+/**
  * @brief Create Secure World EPT hierarchy
  *
  * Create Secure World EPT hierarchy, construct new PML4/PDPT, reuse PD/PT parse from
@@ -194,6 +239,8 @@ void  destroy_secure_world(struct vm *vm)
 			 IA32E_EPT_X_BIT |
 			 IA32E_EPT_WB));
 
+	/* Free trusty ept page-structures */
+	free_secure_world_ept(vm);
 }
 
 static void save_world_ctx(struct run_context *context)

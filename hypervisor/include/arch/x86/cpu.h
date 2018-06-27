@@ -46,6 +46,7 @@
 #define MMU_PTE_PAGE_SHIFT	CPU_PAGE_SHIFT
 #define MMU_PDE_PAGE_SHIFT	21
 
+
 /* Define CPU stack alignment */
 #define CPU_STACK_ALIGN         16UL
 
