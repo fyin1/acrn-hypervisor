@@ -1,6 +1,20 @@
 MAJOR_VERSION=1
 MINOR_VERSION=0
 
+# With V=1 means verbose build. Will show full build commands
+#
+# Without V means silient build. Only show customed message. And we
+# could put more focous on warning.
+ifdef V
+  Q :=
+  vecho := @true
+  SUBOPT := "V=1"
+else
+  Q := @
+  vecho := @echo
+  SUBOPT:= "--no-print-directory"
+endif
+
 VERSION_H = $(BUILDDIR)/include/usercrash/version.h
 
 .PHONY: all check_obj
@@ -14,7 +28,9 @@ LIBS = -levent -lpthread $(EXTRA_LIBS)
 usercrash_s: $(BUILDDIR)/usercrash/obj/protocol.o \
 	$(BUILDDIR)/usercrash/obj/server.o \
 	$(BUILDDIR)/common/obj/log_sys.o
-	$(CC) -g $(CFLAGS) $(INCLUDE) $^ -o $(BUILDDIR)/usercrash/bin/$@ $(LIBS)
+
+	$(vecho) "Generate $@"
+	$(Q)$(CC) -g $(CFLAGS) $(INCLUDE) $^ -o $(BUILDDIR)/usercrash/bin/$@ $(LIBS)
 
 usercrash_c: $(BUILDDIR)/usercrash/obj/protocol.o \
 	$(BUILDDIR)/usercrash/obj/client.o \
@@ -23,7 +39,9 @@ usercrash_c: $(BUILDDIR)/usercrash/obj/protocol.o \
 	$(BUILDDIR)/common/obj/cmdutils.o \
 	$(BUILDDIR)/common/obj/fsutils.o \
 	$(BUILDDIR)/common/obj/strutils.o
-	$(CC) -g $(CFLAGS) $(INCLUDE) $^ -o $(BUILDDIR)/usercrash/bin/$@ $(LIBS)
+
+	$(vecho) "Generate $@"
+	$(Q)$(CC) -g $(CFLAGS) $(INCLUDE) $^ -o $(BUILDDIR)/usercrash/bin/$@ $(LIBS)
 
 debugger: $(BUILDDIR)/usercrash/obj/debugger.o \
 	$(BUILDDIR)/usercrash/obj/crash_dump.o \
@@ -31,17 +49,20 @@ debugger: $(BUILDDIR)/usercrash/obj/debugger.o \
 	$(BUILDDIR)/common/obj/cmdutils.o \
 	$(BUILDDIR)/common/obj/fsutils.o \
 	$(BUILDDIR)/common/obj/strutils.o
-	$(CC) -g $(CFLAGS) $(INCLUDE) $^ -o $(BUILDDIR)/usercrash/bin/$@ $(LIBS)
+
+	$(vecho) "Generate $@"
+	$(Q)$(CC) -g $(CFLAGS) $(INCLUDE) $^ -o $(BUILDDIR)/usercrash/bin/$@ $(LIBS)
 
 $(BUILDDIR)/usercrash/obj/%.o:%.c
-	$(CC) $(CFLAGS) $(INCLUDE) -o $@ -c $<
+	$(vecho) "--> Build $<"
+	$(Q)$(CC) $(CFLAGS) $(INCLUDE) -o $@ -c $<
 
 $(VERSION_H):
-	@if [ ! -d $(BUILDDIR)/include/usercrash ]; then \
+	$(Q)if [ ! -d $(BUILDDIR)/include/usercrash ]; then \
 		mkdir -p $(BUILDDIR)/include/usercrash ; \
 	fi
-	touch $(VERSION_H)
-	@COMMIT=`git log -1 --pretty=format:%h . 2>/dev/null`;\
+	$(Q)touch $(VERSION_H)
+	$(Q)COMMIT=`git log -1 --pretty=format:%h . 2>/dev/null`;\
 	DIRTY=`git diff --name-only $(CURDIR)`;\
 	if [ -n "$$DIRTY" ];then PATCH="$$COMMIT-dirty";else PATCH="$$COMMIT";fi;\
 	TIME=`date "+%Y-%m-%d %H:%M:%S"`;\
@@ -53,25 +74,26 @@ $(VERSION_H):
 	echo "#define UC_BUILD_USER "\""$(USER)"\""" >> $(VERSION_H)
 
 check_obj:
-	@if [ ! -d $(BUILDDIR)/usercrash/bin ]; then \
+	$(vecho) "Check usercrash"
+	$(Q)if [ ! -d $(BUILDDIR)/usercrash/bin ]; then \
 		mkdir -p $(BUILDDIR)/usercrash/bin ; \
 	fi
-	@if [ ! -d $(BUILDDIR)/usercrash/obj ]; then \
+	$(Q)if [ ! -d $(BUILDDIR)/usercrash/obj ]; then \
 		mkdir -p $(BUILDDIR)/usercrash/obj ; \
 	fi
 
 .PHONY: clean
 clean:
-	@echo "Clean objects and binaries"
-	@if [ -e $(VERSION_H) ]; then \
+	$(vecho) "Clean usercrash"
+	$(Q)if [ -e $(VERSION_H) ]; then \
 		$(RM) -f $(VERSION_H); \
 	fi
-	@if [ -d $(BUILDDIR)/usercrash/obj ]; then \
+	$(Q)if [ -d $(BUILDDIR)/usercrash/obj ]; then \
 		find $(BUILDDIR)/usercrash/obj -name "*.o" -exec $(RM) {} \; 2>&1 || exit 0; \
 	fi
-	@if [ -d $(BUILDDIR)/usercrash/bin ]; then \
+	$(Q)if [ -d $(BUILDDIR)/usercrash/bin ]; then \
 		$(RM) -r $(BUILDDIR)/usercrash/bin ; \
 	fi
-	@if [ -d $(BUILDDIR)/usercrash/obj ]; then \
+	$(Q)if [ -d $(BUILDDIR)/usercrash/obj ]; then \
 		$(RM) -r $(BUILDDIR)/usercrash/obj ; \
 	fi
