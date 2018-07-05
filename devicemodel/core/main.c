@@ -510,6 +510,29 @@ vm_deinit_vdevs(struct vmctx *ctx)
 }
 
 static void
+vm_reset_vdevs(struct vmctx *ctx)
+{
+	vrtc_reset(ctx);
+	atkbdc_reset(ctx);
+
+	/* We don't have reset API for pci devices. So we use pci
+	 * deinit/init to emulate pci device reset for now.
+	 * Once we add reset API for all pci devices, we will
+	 * remove this deinit/init here and use reset API here.
+	 *
+	 * pci/ioapic deinit/init is needed because of dependency
+	 * of pci irq allocation/free.
+	 */
+	deinit_pci(ctx);
+	pci_irq_deinit(ctx);
+	ioapic_deinit();
+
+	ioapic_init(ctx);
+	pci_irq_init(ctx);
+	init_pci(ctx);
+}
+
+static void
 vm_loop(struct vmctx *ctx)
 {
 	int error;
