@@ -1081,7 +1081,7 @@ vrtc_get_time(struct vrtc *vrtc)
 }
 
 void
-vrtc_reset(struct vrtc *vrtc)
+__vrtc_reset(struct vrtc *vrtc)
 {
 	struct rtcdev *rtc;
 
@@ -1186,4 +1186,31 @@ vrtc_deinit(struct vmctx *ctx)
 	vrtc_delete_timer(vrtc->update_timer_id);
 	free(vrtc);
 	ctx->vrtc = NULL;
+}
+
+void
+vrtc_reset(struct vmctx *ctx)
+{
+	struct vrtc *vrtc = ctx->vrtc;
+	struct rtcdev *rtc = &vrtc->rtcdev;
+	time_t curtime;
+
+	rtc->reg_a = 0x20;
+	rtc->reg_b = RTCSB_24HR;
+	rtc->reg_c = 0;
+	rtc->reg_d = RTCSD_PWR;
+
+	/* Reset the index register to a safe value. */
+	vrtc->addr = RTC_STATUSD;
+
+	/*
+	 * Initialize RTC time to 00:00:00 Jan 1, 1970 if curtime = 0
+	 */
+	curtime = time(NULL);
+
+	pthread_mutex_lock(&vrtc->mtx);
+	vrtc->base_rtctime = VRTC_BROKEN_TIME;
+	vrtc_time_update(vrtc, curtime, time(NULL));
+	secs_to_rtc(curtime, vrtc, 0);
+	pthread_mutex_unlock(&vrtc->mtx);
 }
