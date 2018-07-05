@@ -218,7 +218,7 @@ movement_get(struct ps2mouse_info *mouse)
 }
 
 static void
-ps2mouse_reset(struct ps2mouse_info *mouse)
+__ps2mouse_reset(struct ps2mouse_info *mouse)
 {
 /* assert(pthread_mutex_isowned_np(&mouse->mtx)); */
 	fifo_reset(mouse);
@@ -296,13 +296,13 @@ ps2mouse_write(struct ps2mouse_info *mouse, uint8_t val, int insert)
 			fifo_put(mouse, PS2MC_ACK);
 			break;
 		case PS2MC_RESET_DEV:
-			ps2mouse_reset(mouse);
+			__ps2mouse_reset(mouse);
 			fifo_put(mouse, PS2MC_ACK);
 			fifo_put(mouse, PS2MC_BAT_SUCCESS);
 			fifo_put(mouse, PS2MOUSE_DEV_ID);
 			break;
 		case PS2MC_SET_DEFAULTS:
-			ps2mouse_reset(mouse);
+			__ps2mouse_reset(mouse);
 			fifo_put(mouse, PS2MC_ACK);
 			break;
 		case PS2MC_DISABLE:
@@ -403,12 +403,19 @@ ps2mouse_init(struct atkbdc_base *base)
 	mouse->base = base;
 
 	pthread_mutex_lock(&mouse->mtx);
-	ps2mouse_reset(mouse);
+	__ps2mouse_reset(mouse);
 	pthread_mutex_unlock(&mouse->mtx);
 
 	console_ptr_register(ps2mouse_event, mouse, 1);
 
 	return mouse;
+}
+
+void
+ps2mouse_reset(struct atkbdc_base *base)
+{
+	struct ps2mouse_info *mouse = base->ps2mouse;
+	__ps2mouse_reset(mouse);
 }
 
 void

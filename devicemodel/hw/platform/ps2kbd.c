@@ -481,3 +481,11 @@ ps2kbd_deinit(struct atkbdc_base *base)
 	free(base->ps2kbd);
 	base->ps2kbd = NULL;
 }
+
+void
+ps2kbd_reset(struct atkbdc_base *base)
+{
+	base->ps2kbd->enabled = false;
+	base->ps2kbd->curcmd = 0;
+	fifo_reset(base->ps2kbd);
+}

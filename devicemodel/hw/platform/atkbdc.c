@@ -482,6 +482,29 @@ atkbdc_deinit(struct vmctx *ctx)
 	ctx->atkbdc_base = NULL;
 }
 
+void
+atkbdc_reset(struct vmctx *ctx)
+{
+	struct atkbdc_base *base = ctx->atkbdc_base;
+
+	ps2kbd_reset(base);
+	ps2mouse_reset(base);
+
+	base->status = 0;
+	base->outport = 0;
+	memset(&base->ram, 0, RAMSZ);
+	base->curcmd = 0;
+	base->ctrlbyte = 0;
+
+	memset(&base->kbd.buffer, 0, FIFOSZ);
+	base->kbd.brd = 0;
+	base->kbd.bwr = 0;
+	base->kbd.bcnt = 0;
+	base->kbd.irq_active = false;
+
+	base->aux.irq_active = false;
+}
+
 static void
 atkbdc_dsdt(void)
 {
