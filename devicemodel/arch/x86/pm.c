@@ -41,6 +41,7 @@
 #include "mevent.h"
 #include "irq.h"
 #include "lpc.h"
+#include "ioc.h"
 
 static pthread_mutex_t pm_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct mevent *power_button;
@@ -261,15 +262,19 @@ pm1_control_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
 		 * says that '5' should be stored in SLP_TYP for S5.
 		 */
 		if (*eax & PM1_SLP_EN) {
-			if ((pm1_control & PM1_SLP_TYP) >> 10 == 5) {
-				error = vm_suspend(ctx, VM_SUSPEND_POWEROFF);
-				assert(error == 0 || errno == EALREADY);
+			uint32_t power_state = 0;
+
+			if (ctx->ioc_dev) {
+				power_state =
+					get_ioc_overwritten_power_state();
+			} else if ((pm1_control & PM1_SLP_TYP) >> 10 == 5) {
+				power_state = VM_SUSPEND_POWEROFF;
+			} else if ((pm1_control & PM1_SLP_TYP) >> 10 == 3) {
+				power_state = VM_SUSPEND_SUSPEND;
 			}
 
-			if ((pm1_control & PM1_SLP_TYP) >> 10 == 3) {
-				error = vm_suspend(ctx, VM_SUSPEND_SUSPEND);
-				assert(error == 0 || errno == EALREADY);
-			}
+			error = vm_suspend(ctx, power_state);
+			assert(error == 0 || errno == EALREADY);
 		}
 	}
 	return 0;
