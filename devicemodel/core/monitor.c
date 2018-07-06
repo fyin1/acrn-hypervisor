@@ -19,6 +19,7 @@
 #include "dm.h"
 #include "monitor.h"
 #include "acrn_mngr.h"
+#include "pm.h"
 
 /* helpers */
 /* Check if @path is a directory, and create if not exist */
@@ -206,6 +207,15 @@ static void handle_query(struct mngr_msg *msg, int client_fd, void *param)
 	mngr_send_msg(client_fd, &ack.msg, NULL, 0, ACK_TIMEOUT);
 }
 
+static struct monitor_vm_ops pmc_ops = {
+	.stop       = NULL,
+	.resume     = vm_monitor_resume,
+	.suspend    = NULL,
+	.pause      = NULL,
+	.unpause    = NULL,
+	.query      = vm_monitor_query,
+};
+
 int monitor_init(struct vmctx *ctx)
 {
 	int ret;
@@ -243,6 +253,8 @@ int monitor_init(struct vmctx *ctx)
 		fprintf(stderr, "%s %d\r\n", __FUNCTION__, __LINE__);
 		goto handlers_err;
 	}
+
+	monitor_register_vm_ops(&pmc_ops, ctx, "PMC_VM_OPs");
 
 	return 0;
 
