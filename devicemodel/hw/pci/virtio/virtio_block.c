@@ -128,7 +128,7 @@ struct virtio_blk {
 	struct virtio_blk_ioreq ios[VIRTIO_BLK_RINGSZ];
 };
 
-static void virtio_blk_reset(void *);
+static void __virtio_blk_reset(void *);
 static void virtio_blk_notify(void *, struct virtio_vq_info *);
 static int virtio_blk_cfgread(void *, int, int, uint32_t *);
 static int virtio_blk_cfgwrite(void *, int, int, uint32_t);
@@ -137,7 +137,7 @@ static struct virtio_ops virtio_blk_ops = {
 	"virtio_blk",		/* our name */
 	1,			/* we support 1 virtqueue */
 	sizeof(struct virtio_blk_config), /* config reg size */
-	virtio_blk_reset,	/* reset */
+	__virtio_blk_reset,	/* reset */
 	virtio_blk_notify,	/* device-wide qnotify */
 	virtio_blk_cfgread,	/* read PCI config */
 	virtio_blk_cfgwrite,	/* write PCI config */
@@ -147,7 +147,7 @@ static struct virtio_ops virtio_blk_ops = {
 };
 
 static void
-virtio_blk_reset(void *vdev)
+__virtio_blk_reset(void *vdev)
 {
 	struct virtio_blk *blk = vdev;
 
@@ -404,6 +404,21 @@ virtio_blk_deinit(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 	}
 }
 
+static void
+virtio_blk_reset(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	struct virtio_blk *blk;
+
+	if (dev->arg) {
+		blk = (struct virtio_blk *) dev->arg;
+
+		if (vq_has_descs(&blk->vq))
+			virtio_blk_proc(blk, &blk->vq);
+
+		__virtio_blk_reset(blk);
+	}
+}
+
 static int
 virtio_blk_cfgwrite(void *vdev, int offset, int size, uint32_t value)
 {
@@ -428,6 +443,7 @@ struct pci_vdev_ops pci_ops_virtio_blk = {
 	.vdev_init	= virtio_blk_init,
 	.vdev_deinit	= virtio_blk_deinit,
 	.vdev_barwrite	= virtio_pci_write,
-	.vdev_barread	= virtio_pci_read
+	.vdev_barread	= virtio_pci_read,
+	.vdev_reset	= virtio_blk_reset,
 };
 DEFINE_PCI_DEVTYPE(pci_ops_virtio_blk);

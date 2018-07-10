@@ -393,6 +393,12 @@ pci_emul_mem_handler(struct vmctx *ctx, int vcpu, int dir, uint64_t addr,
 	assert(bidx <= PCI_BARMAX);
 	assert(pdi->bar[bidx].type == PCIBAR_MEM32 ||
 	       pdi->bar[bidx].type == PCIBAR_MEM64);
+
+	if (!(addr >= pdi->bar[bidx].addr &&
+	       addr + size <= pdi->bar[bidx].addr + pdi->bar[bidx].size))
+		fprintf(stderr, "dev: %s, addr: 0x%lx, bidx: %d, t_addr: 0x%lx, size: 0x%lx\n", pdi->name,
+				addr, bidx, pdi->bar[bidx].addr, pdi->bar[bidx].size);
+
 	assert(addr >= pdi->bar[bidx].addr &&
 	       addr + size <= pdi->bar[bidx].addr + pdi->bar[bidx].size);
 
@@ -1312,6 +1318,44 @@ deinit_pci(struct vmctx *ctx)
 				assert(ops != NULL);
 				pci_emul_deinit(ctx, ops, bus, slot,
 				    func, fi);
+			}
+		}
+	}
+}
+
+void
+reset_pci(struct vmctx *ctx)
+{
+	struct pci_vdev_ops *ops;
+	struct businfo *bi;
+	struct slotinfo *si;
+	struct funcinfo *fi;
+	int bus, slot, func;
+
+	for (bus = 0; bus < MAXBUSES; bus++) {
+		bi = pci_businfo[bus];
+		if (bi == NULL)
+			continue;
+
+		for (slot = 0; slot < MAXSLOTS; slot++) {
+			si = &bi->slotinfo[slot];
+			for (func = 0; func < MAXFUNCS; func++) {
+				fi = &si->si_funcs[func];
+				if (fi->fi_name == NULL)
+					continue;
+
+				if (fi->fi_devi == NULL)
+					continue;
+
+				ops = pci_emul_finddev(fi->fi_name);
+				assert(ops != NULL);
+				if (ops->vdev_reset)
+					(*ops->vdev_reset)(ctx, fi->fi_devi,
+							fi->fi_param);
+
+				/* need to reset the msi/msix enable flags */
+				fi->fi_devi->msi.enabled = 0;
+				fi->fi_devi->msix.enabled = 0;
 			}
 		}
 	}

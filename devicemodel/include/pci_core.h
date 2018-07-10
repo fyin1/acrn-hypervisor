@@ -53,6 +53,10 @@ struct pci_vdev_ops {
 	void	(*vdev_deinit)(struct vmctx *, struct pci_vdev *,
 			char *opts);
 
+	/* instance reset */
+	void	(*vdev_reset)(struct vmctx *, struct pci_vdev *,
+			char *opts);
+
 	/* ACPI DSDT enumeration */
 	void	(*vdev_write_dsdt)(struct pci_vdev *);
 
@@ -235,6 +239,7 @@ typedef void (*pci_lintr_cb)(int b, int s, int pin, int pirq_pin,
 
 int	init_pci(struct vmctx *ctx);
 void	deinit_pci(struct vmctx *ctx);
+void	reset_pci(struct vmctx *ctx);
 void	msicap_cfgwrite(struct pci_vdev *pi, int capoff, int offset,
 			int bytes, uint32_t val);
 void	msixcap_cfgwrite(struct pci_vdev *pi, int capoff, int offset,

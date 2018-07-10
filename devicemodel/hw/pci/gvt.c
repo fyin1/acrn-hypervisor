@@ -255,15 +255,30 @@ pci_gvt_init(struct vmctx *ctx, struct pci_vdev *pi, char *opts)
 	return ret;
 }
 
-void
+static void
 pci_gvt_deinit(struct vmctx *ctx, struct pci_vdev *pi, char *opts)
 {
 	int ret;
 	struct pci_gvt *gvt = pi->arg;
 
 	ret = gvt_destroy_instance(gvt);
-	if (ret)
+	if (ret) {
 		WPRINTF(("GVT: %s: failed: errno=%d\n", __func__, ret));
+		return;
+	}
+
+	pci_emul_free_bars(pi);
+	free(gvt);
+}
+
+static void
+pci_gvt_reset(struct vmctx *ctx, struct pci_vdev *pi, char *opts)
+{
+	if (vm_get_suspend_mode() == VM_SUSPEND_SUSPEND)
+		return;
+
+	pci_gvt_deinit(ctx, pi, opts);
+	pci_gvt_init(ctx, pi, opts);
 }
 
 struct pci_vdev_ops pci_ops_gvt = {
@@ -272,6 +287,7 @@ struct pci_vdev_ops pci_ops_gvt = {
 	.vdev_deinit	= pci_gvt_deinit,
 	.vdev_barwrite	= pci_gvt_write,
 	.vdev_barread	= pci_gvt_read,
+	.vdev_reset	= pci_gvt_reset,
 };
 
 DEFINE_PCI_DEVTYPE(pci_ops_gvt);

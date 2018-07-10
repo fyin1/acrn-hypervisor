@@ -72,13 +72,13 @@ static int virtio_hyper_dmabuf_k_vq_set(unsigned int nvq, unsigned int idx,
 
 static void virtio_hyper_dmabuf_no_notify(void *, struct virtio_vq_info *);
 static void virtio_hyper_dmabuf_set_status(void *, uint64_t);
-static void virtio_hyper_dmabuf_reset(void *);
+static void __virtio_hyper_dmabuf_reset(void *);
 
 static struct virtio_ops virtio_hyper_dmabuf_ops_k = {
 	"virtio_hyper_dmabuf",		/* our name */
 	HYPER_DMABUF_VQ_NUM,		/* we support 2 virtqueue */
 	0,				/* config reg size */
-	virtio_hyper_dmabuf_reset,	/* reset */
+	__virtio_hyper_dmabuf_reset,	/* reset */
 	virtio_hyper_dmabuf_no_notify,	/* device-wide qnotify */
 	NULL,				/* read virtio config */
 	NULL,				/* write virtio config */
@@ -176,7 +176,7 @@ virtio_hyper_dmabuf_k_reset(void)
 }
 
 static void
-virtio_hyper_dmabuf_reset(void *base)
+__virtio_hyper_dmabuf_reset(void *base)
 {
 	struct virtio_hyper_dmabuf *hyper_dmabuf;
 
@@ -351,11 +351,22 @@ virtio_hyper_dmabuf_deinit(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 		free((struct virtio_hyper_dmabuf *)dev->arg);
 }
 
+static void
+virtio_hyper_dmabuf_reset(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	struct virtio_hyper_dmabuf *hyper_dmabuf =
+		(struct virtio_hyper_dmabuf *)dev->arg;
+
+	__virtio_hyper_dmabuf_reset(hyper_dmabuf);
+	return;
+}
+
 struct pci_vdev_ops pci_ops_virtio_hyper_dmabuf = {
 	.class_name	= "virtio-hyper_dmabuf",
 	.vdev_init	= virtio_hyper_dmabuf_init,
 	.vdev_deinit	= virtio_hyper_dmabuf_deinit,
 	.vdev_barwrite	= virtio_pci_write,
-	.vdev_barread	= virtio_pci_read
+	.vdev_barread	= virtio_pci_read,
+	.vdev_reset	= virtio_hyper_dmabuf_reset,
 };
 DEFINE_PCI_DEVTYPE(pci_ops_virtio_hyper_dmabuf);
