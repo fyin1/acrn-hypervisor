@@ -747,7 +747,6 @@ struct vmctx;
 /* IOC mediator common ops */
 int ioc_init(struct vmctx *ctx);
 void ioc_deinit(struct vmctx *ctx);
-uint32_t get_ioc_overwritten_power_state(void);
 
 /* Build a cbc_request and send it to CBC protocol stack */
 void ioc_build_request(struct ioc_dev *ioc, int32_t link_len, int32_t srv_len);

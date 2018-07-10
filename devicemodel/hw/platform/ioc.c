@@ -515,17 +515,6 @@ static struct wlist_group wlist_rx_group_table[] = {
 static struct wlist_group wlist_tx_group_table[] = {
 };
 
-static uint32_t ioc_overwritten_power_state = 0;
-uint32_t get_ioc_overwritten_power_state(void)
-{
-	uint32_t ret = 0;
-
-	ret = ioc_overwritten_power_state;
-	ioc_overwritten_power_state = 0;
-
-	return ret;
-}
-
 /*
  * Read data from the native CBC cdevs and virtual UART based on
  * IOC channel ID.
