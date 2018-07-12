@@ -546,6 +546,7 @@ vm_system_reboot(struct vmctx *ctx)
 
 	vm_reset_vdevs(ctx);
 
+	acpi_build(ctx, guest_ncpus);
 	acrn_sw_load(ctx);
 	vm_reset(ctx);
 	vm_set_suspend_mode(VM_SUSPEND_NONE);

@@ -100,7 +100,6 @@ SYSRES_MEM(PCI_EMUL_ECFG_BASE, PCI_EMUL_ECFG_SIZE);
 #define	PCI_EMUL_MEMLIMIT64	0x8D00000000UL
 
 static struct pci_vdev_ops *pci_emul_finddev(char *name);
-static void pci_lintr_route(struct pci_vdev *dev);
 static void pci_lintr_update(struct pci_vdev *dev);
 static void pci_cfgrw(struct vmctx *ctx, int vcpu, int in, int bus, int slot,
 		      int func, int coff, int bytes, uint32_t *val);
@@ -1359,6 +1358,8 @@ reset_pci(struct vmctx *ctx)
 			}
 		}
 	}
+
+	lpc_pirq_routed();
 }
 
 static void
@@ -1665,7 +1666,7 @@ pci_lintr_request(struct pci_vdev *dev)
 	pci_set_cfgdata8(dev, PCIR_INTPIN, bestpin + 1);
 }
 
-static void
+void
 pci_lintr_route(struct pci_vdev *dev)
 {
 	struct businfo *bi;

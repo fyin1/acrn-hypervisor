@@ -404,21 +404,6 @@ virtio_blk_deinit(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 	}
 }
 
-static void
-virtio_blk_reset(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
-{
-	struct virtio_blk *blk;
-
-	if (dev->arg) {
-		blk = (struct virtio_blk *) dev->arg;
-
-		if (vq_has_descs(&blk->vq))
-			virtio_blk_proc(blk, &blk->vq);
-
-		__virtio_blk_reset(blk);
-	}
-}
-
 static int
 virtio_blk_cfgwrite(void *vdev, int offset, int size, uint32_t value)
 {
@@ -444,6 +429,5 @@ struct pci_vdev_ops pci_ops_virtio_blk = {
 	.vdev_deinit	= virtio_blk_deinit,
 	.vdev_barwrite	= virtio_pci_write,
 	.vdev_barread	= virtio_pci_read,
-	.vdev_reset	= virtio_blk_reset,
 };
 DEFINE_PCI_DEVTYPE(pci_ops_virtio_blk);
