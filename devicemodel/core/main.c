@@ -519,6 +519,20 @@ vm_reset_vdevs(struct vmctx *ctx)
 }
 
 static void
+vm_suspend_vdevs(struct vmctx *ctx)
+{
+	vrtc_reset(ctx);
+	atkbdc_reset(ctx);
+	suspend_pci(ctx);
+}
+
+static void
+vm_resume_vdevs(struct vmctx *ctx)
+{
+	resume_pci(ctx);
+}
+
+static void
 vm_system_reboot(struct vmctx *ctx)
 {
 	int vcpu_id = 0;
@@ -578,9 +592,11 @@ vm_suspend_resume(struct vmctx *ctx)
 	}
 
 	pm_backto_wakeup(ctx);
-	vm_reset_vdevs(ctx);
 
+	vm_suspend_vdevs(ctx);
 	wait_for_resume(ctx);
+	vm_resume_vdevs(ctx);
+
 	vm_reset(ctx);
 }
 

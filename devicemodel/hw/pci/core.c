@@ -1362,6 +1362,84 @@ reset_pci(struct vmctx *ctx)
 	lpc_pirq_routed();
 }
 
+void
+suspend_pci(struct vmctx *ctx)
+{
+	struct pci_vdev_ops *ops;
+	struct businfo *bi;
+	struct slotinfo *si;
+	struct funcinfo *fi;
+	int bus, slot, func;
+
+	for (bus = 0; bus < MAXBUSES; bus++) {
+		bi = pci_businfo[bus];
+		if (bi == NULL)
+			continue;
+
+		for (slot = 0; slot < MAXSLOTS; slot++) {
+			si = &bi->slotinfo[slot];
+			for (func = 0; func < MAXFUNCS; func++) {
+				fi = &si->si_funcs[func];
+				if (fi->fi_name == NULL)
+					continue;
+
+				if (fi->fi_devi == NULL)
+					continue;
+
+				ops = pci_emul_finddev(fi->fi_name);
+				assert(ops != NULL);
+				if (ops->vdev_suspend)
+					(*ops->vdev_suspend)(ctx, fi->fi_devi,
+							fi->fi_param);
+
+				/* need to reset the msi/msix enable flags */
+				fi->fi_devi->msi.enabled = 0;
+				fi->fi_devi->msix.enabled = 0;
+			}
+		}
+	}
+}
+
+void
+resume_pci(struct vmctx *ctx)
+{
+	struct pci_vdev_ops *ops;
+	struct businfo *bi;
+	struct slotinfo *si;
+	struct funcinfo *fi;
+	int bus, slot, func;
+
+	for (bus = 0; bus < MAXBUSES; bus++) {
+		bi = pci_businfo[bus];
+		if (bi == NULL)
+			continue;
+
+		for (slot = 0; slot < MAXSLOTS; slot++) {
+			si = &bi->slotinfo[slot];
+			for (func = 0; func < MAXFUNCS; func++) {
+				fi = &si->si_funcs[func];
+				if (fi->fi_name == NULL)
+					continue;
+
+				if (fi->fi_devi == NULL)
+					continue;
+
+				ops = pci_emul_finddev(fi->fi_name);
+				assert(ops != NULL);
+				if (ops->vdev_resume) {
+					(*ops->vdev_resume)(ctx, fi->fi_devi,
+							fi->fi_param);
+
+					pci_lintr_route(fi->fi_devi);
+				}
+
+			}
+		}
+	}
+
+	lpc_pirq_routed();
+}
+
 static void
 pci_apic_prt_entry(int bus, int slot, int pin, int pirq_pin, int ioapic_irq,
 		   void *arg)
@@ -1654,7 +1732,7 @@ pci_lintr_request(struct pci_vdev *dev)
 	si = &bi->slotinfo[dev->slot];
 	bestpin = 0;
 	bestcount = si->si_intpins[0].ii_count;
-	for (pin = 1; pin < 4; pin++) {
+	for (pin = 1; pin < 2; pin++) {
 		if (si->si_intpins[pin].ii_count < bestcount) {
 			bestpin = pin;
 			bestcount = si->si_intpins[pin].ii_count;

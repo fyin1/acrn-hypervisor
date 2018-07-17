@@ -926,7 +926,7 @@ pciaccess_init(void)
  *       MSI, so that mitigate ptdev GSI sharing issue.
  */
 static int
-passthru_init(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+passthru_init_without_lintr(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 {
 	int bus, slot, func, error;
 	struct passthru_dev *ptdev;
@@ -1028,9 +1028,6 @@ passthru_init(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 	if (error == IRQ_MSI && !keep_gsi)
 		return 0;
 
-	/* Allocates the virq if ptdev only support INTx */
-	pci_lintr_request(dev);
-
 	ptdev->phys_pin = read_config(ptdev->phys_dev, PCIR_INTLINE, 1);
 
 	if (ptdev->phys_pin == -1 || ptdev->phys_pin > 256) {
@@ -1046,6 +1043,19 @@ done:
 		vm_unassign_ptdev(ctx, bus, slot, func);
 	}
 	return error;
+}
+
+static int
+passthru_init(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	int ret = 0;
+
+	ret = passthru_init_without_lintr(ctx, dev, opts);
+
+	/* Allocates the virq if ptdev only support INTx */
+	pci_lintr_request(dev);
+
+	return ret;
 }
 
 void
@@ -1120,6 +1130,24 @@ passthru_bind_irq(struct vmctx *ctx, struct pci_vdev *dev)
 
 	vm_set_ptdev_intx_info(ctx, virt_bdf, ptdev->phys_bdf,
 			       dev->lintr.ioapic_irq, ptdev->phys_pin, false);
+}
+
+static void
+passthru_suspend(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	vm_reset_ptdev_intx_info(ctx, dev->lintr.ioapic_irq, false);
+}
+
+static int
+passthru_resume(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	struct passthru_dev *ptdev = dev->arg;
+	uint16_t virt_bdf = PCI_BDF(dev->bus, dev->slot, dev->func);
+
+	vm_set_ptdev_intx_info(ctx, virt_bdf, ptdev->phys_bdf,
+			       dev->lintr.ioapic_irq, ptdev->phys_pin, false);
+
+	return 0;
 }
 
 static int
@@ -1955,6 +1983,8 @@ struct pci_vdev_ops passthru = {
 	.class_name		= "passthru",
 	.vdev_init		= passthru_init,
 	.vdev_deinit		= passthru_deinit,
+	.vdev_suspend		= passthru_suspend,
+	.vdev_resume		= passthru_resume,
 	.vdev_cfgwrite		= passthru_cfgwrite,
 	.vdev_cfgread		= passthru_cfgread,
 	.vdev_barwrite		= passthru_write,

@@ -793,20 +793,21 @@ void cpu_dead(uint16_t pcpu_id)
 	/* For debug purposes, using a stack variable in the while loop enables
 	 * us to modify the value using a JTAG probe and resume if needed.
 	 */
-	int halt = 1;
+	int halt = 1, ret;
 
 	if (bitmap_test_and_clear(pcpu_id, &pcpu_active_bitmap) == false) {
 		pr_err("pcpu%hu already dead", pcpu_id);
 		return;
 	}
 
-	/* Set state to show CPU is dead */
-	cpu_set_current_state(pcpu_id, CPU_STATE_DEAD);
-
 	/* clean up native stuff */
 	timer_cleanup();
-	vmx_off(pcpu_id);
+	ret = vmx_off(pcpu_id);
+	pr_err("ret: %d from vmx_off", ret);
 	CACHE_FLUSH_INVALIDATE_ALL();
+
+	/* Set state to show CPU is dead */
+	cpu_set_current_state(pcpu_id, CPU_STATE_DEAD);
 
 	/* Halt the CPU */
 	do {

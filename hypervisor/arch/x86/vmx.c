@@ -111,6 +111,7 @@ int exec_vmxon_instr(uint16_t pcpu_id)
 		if (vcpu != NULL) {
 			vmcs_pa = HVA2HPA(vcpu->arch_vcpu.vmcs);
 			ret = exec_vmptrld(&vmcs_pa);
+			pr_err("ret: %d after exec_vmptrld", ret);
 		}
 	} else
 		pr_err("%s, alloc memory for VMXON region failed\n",
