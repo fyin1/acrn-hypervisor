@@ -365,14 +365,28 @@ pci_wdt_deinit(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 	memset(&wdt_state, 0, sizeof(wdt_state));
 }
 
+int pci_wdt_resume(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	/* We don't restore watchdog timer here for now. */
+	return 0;
+}
+
+void pci_wdt_suspend(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	/* stop watchdog timer when UOS suspend */
+	stop_wdt_timer();
+}
+
 struct pci_vdev_ops pci_ops_wdt = {
 	.class_name	= "wdt-i6300esb",
 	.vdev_init	= pci_wdt_init,
-	.vdev_deinit = pci_wdt_deinit,
-	.vdev_cfgwrite = pci_wdt_cfg_write,
-	.vdev_cfgread = pci_wdt_cfg_read,
+	.vdev_deinit	= pci_wdt_deinit,
+	.vdev_cfgwrite	= pci_wdt_cfg_write,
+	.vdev_cfgread	= pci_wdt_cfg_read,
 	.vdev_barwrite	= pci_wdt_bar_write,
-	.vdev_barread	= pci_wdt_bar_read
+	.vdev_barread	= pci_wdt_bar_read,
+	.vdev_resume 	= pci_wdt_resume,
+	.vdev_suspend	= pci_wdt_suspend,
 };
 
 DEFINE_PCI_DEVTYPE(pci_ops_wdt);

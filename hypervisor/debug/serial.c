@@ -338,3 +338,42 @@ int serial_puts(uint32_t uart_handle, const char *s, uint32_t length)
 	/* Return actual number of bytes written */
 	return (int)(s - old_data);
 }
+
+int serial_suspend(char *uart_id)
+{
+	int status = -1;
+	struct uart *uart;
+	uint32_t index;
+
+	uart = get_uart_by_id(uart_id, &index);
+
+	if (uart != NULL && index < SERIAL_MAX_DEVS &&
+			(sio_initialized[index] != 0U) &&
+			(uart->open_flag == true) &&
+			(uart->tgt_uart->suspend != NULL)) {
+
+		status = uart->tgt_uart->suspend(uart->tgt_uart);
+	}
+
+	return status;
+}
+
+int serial_resume(char *uart_id)
+{
+	int status = -1;
+	struct uart *uart;
+	uint32_t index;
+
+	uart = get_uart_by_id(uart_id, &index);
+
+	if (uart != NULL && index < SERIAL_MAX_DEVS &&
+			(sio_initialized[index] != 0U) &&
+			(uart->open_flag == true) &&
+			(uart->tgt_uart->resume != NULL)) {
+
+		status = uart->tgt_uart->resume(uart->tgt_uart,
+						&(uart->config));
+	}
+
+	return status;
+}

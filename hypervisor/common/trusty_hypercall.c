@@ -114,6 +114,7 @@ int64_t hcall_restore_sworld_context(struct vcpu *vcpu)
 	restore_sworld_context(vcpu);
 
 	vcpu->vm->sworld_control.flag.ctx_saved = 0;
+	vcpu->vm->sworld_control.flag.active = 1;;
 
 	return 0;
 }

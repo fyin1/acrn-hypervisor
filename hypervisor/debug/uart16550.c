@@ -22,6 +22,23 @@ static int uart_enabled = 1;
 static int serial_port_mapped;
 static int uart_enabled = 1;
 #define UART_BASE_ADDRESS		CONFIG_SERIAL_MMIO_BASE
+
+#define PCIE_MMCFG_BASE			0xe0000000UL
+#define BUS_UART			0x0U
+#define DEV_UART			0x18U
+#define FUN_UART			0x2U
+#define REG_UART			0x10U
+
+#define PCI_CFG_ADDR(M, B, D, F, R)	(M + ((B & 0xFFU) << 20U) +\
+					((D & 0x1FU) << 15U) +\
+					((F & 0x07U) << 12U) + R)
+
+#define UART_CFG_ADDR	PCI_CFG_ADDR(PCIE_MMCFG_BASE,	\
+					BUS_UART,	\
+					DEV_UART,	\
+					FUN_UART,	\
+					REG_UART)
+
 #else
 #warning  "no uart base configure, please check!"
 static int serial_port_mapped;
@@ -136,6 +153,9 @@ static int uart16550_init(struct tgt_uart *tgt_uart)
 		status = -ENODEV;
 	} else {
 		if (strcmp(tgt_uart->uart_id, "STDIO") == 0) {
+			tgt_uart->base_address =
+				(*(volatile uint32_t *)UART_CFG_ADDR)
+							& 0xfffff000U;
 			atomic_store(&tgt_uart->open_count, 0);
 		} else {
 			/* set open count to 1 to prevent open */
@@ -244,6 +264,48 @@ static void uart16550_close(struct tgt_uart *tgt_uart)
 		}
 	}
 }
+static int uart16550_validate_port(struct tgt_uart *tgt_uart)
+{
+	uint32_t val;
+
+	val = uart16550_read_reg(tgt_uart->base_address, UART16550_IER);
+	if (val == 0xff)
+		return -1;
+
+	return 0;
+}
+
+static int uart16550_suspend(struct tgt_uart *tgt_uart)
+{
+	if (tgt_uart != NULL) {
+		if (strcmp(tgt_uart->uart_id, "STDIO") == 0) {
+			/* TODO: Add logic to suspend the UART */
+		} else {
+			return -ENODEV;
+		}
+	}
+	return 0;
+}
+
+static int uart16550_resume(struct tgt_uart *tgt_uart,
+			struct uart_config *config)
+{
+	if (tgt_uart != NULL) {
+		if (strcmp(tgt_uart->uart_id, "STDIO") == 0) {
+			tgt_uart->base_address =
+				(*(volatile uint32_t *)UART_CFG_ADDR)
+							& 0xfffff000U;
+			if (!uart16550_validate_port(tgt_uart)) {
+				tgt_uart->open(tgt_uart, config);
+			} else {
+				return -EIO;
+			}
+		} else {
+			return -ENODEV;
+		}
+	}
+	return 0;
+}
 
 static void uart16550_read(struct tgt_uart *tgt_uart, void *buffer,
 		uint32_t *bytes_read)
@@ -301,6 +363,8 @@ struct tgt_uart Tgt_Uarts[SERIAL_MAX_DEVS] = {
 		.init			= uart16550_init,
 		.open			= uart16550_open,
 		.close			= uart16550_close,
+		.suspend		= uart16550_suspend,
+		.resume			= uart16550_resume,
 		.read			= uart16550_read,
 		.write			= uart16550_write,
 		.tx_is_busy		= uart16550_tx_is_busy,

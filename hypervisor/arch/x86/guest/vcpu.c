@@ -261,6 +261,7 @@ void destroy_vcpu(struct vcpu *vcpu)
  */
 void reset_vcpu(struct vcpu *vcpu)
 {
+	int i;
 	struct vlapic *vlapic;
 
 	pr_dbg("vcpu%hu reset", vcpu->vcpu_id);
@@ -269,6 +270,11 @@ void reset_vcpu(struct vcpu *vcpu)
 
 	if (vcpu->state == VCPU_INIT)
 		return;
+
+	for (i = 0; i < NR_WORLD; i++) {
+		memset(&vcpu->arch_vcpu.contexts[i],
+			0, sizeof(struct run_context));
+	}
 
 	vcpu->state = VCPU_INIT;
 

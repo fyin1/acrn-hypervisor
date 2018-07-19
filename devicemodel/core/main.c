@@ -448,6 +448,11 @@ handle_vmexit(struct vmctx *ctx, struct vhm_request *vhm_req, int vcpu)
 	default:
 		exit(1);
 	}
+
+	if ((VM_SUSPEND_SYSTEM_RESET == vm_get_suspend_mode()) ||
+		(VM_SUSPEND_SUSPEND == vm_get_suspend_mode()))
+		return;
+
 	vm_notify_request_done(ctx, vcpu);
 }
 
@@ -513,16 +518,39 @@ vm_deinit_vdevs(struct vmctx *ctx)
 static void
 vm_reset_vdevs(struct vmctx *ctx)
 {
-	vrtc_reset(ctx);
-	atkbdc_reset(ctx);
-	reset_pci(ctx);
+	/*
+	 * The current virtual devices doesn't define virtual
+	 * device reset function. So we call vdev deinit/init
+	 * pairing to emulate the device reset operation.
+	 *
+	 * pci/ioapic deinit/init is needed because of dependency
+	 * of pci irq allocation/free.
+	 *
+	 * acpi build is necessary because irq for each vdev
+	 * could be assigned with different number after reset.
+	 */
+	atkbdc_deinit(ctx);
+	vrtc_deinit(ctx);
+
+	deinit_pci(ctx);
+	pci_irq_deinit(ctx);
+	ioapic_deinit();
+
+	atkbdc_init(ctx);
+	vrtc_init(ctx);
+
+	ioapic_init(ctx);
+	pci_irq_init(ctx);
+	init_pci(ctx);
+
+	if (acpi) {
+		acpi_build(ctx, guest_ncpus);
+	}
 }
 
 static void
 vm_suspend_vdevs(struct vmctx *ctx)
 {
-	vrtc_reset(ctx);
-	atkbdc_reset(ctx);
 	suspend_pci(ctx);
 }
 
@@ -581,6 +609,7 @@ vm_suspend_resume(struct vmctx *ctx)
 	 *   5. hypercall restart vm
 	 */
 	vm_pause(ctx);
+
 	for (vcpu_id = 0; vcpu_id < 4; vcpu_id++) {
 		struct vhm_request *vhm_req;
 
@@ -591,11 +620,11 @@ vm_suspend_resume(struct vmctx *ctx)
 			vm_notify_request_done(ctx, vcpu_id);
 	}
 
-	pm_backto_wakeup(ctx);
-
 	vm_suspend_vdevs(ctx);
 	wait_for_resume(ctx);
+
 	vm_resume_vdevs(ctx);
+	pm_backto_wakeup(ctx);
 
 	vm_reset(ctx);
 }

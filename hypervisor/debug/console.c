@@ -217,3 +217,69 @@ void console_setup_timer(void)
 	if (add_timer(&console_timer) != 0)
 		pr_err("Failed to add console kick timer");
 }
+
+int console_suspend(void)
+{
+	int status = 0;
+
+	if (serial_handle != SERIAL_INVALID_HANDLE) {
+		status = serial_suspend("STDIO");
+		if (status) {
+			/* serial might work because suspend failed */
+			pr_acrnlog("Failed to suspend console!\n");
+			return status;
+		}
+		del_timer(&console_timer);
+	}
+
+	pr_acrnlog("Console suspended.");
+	return status;
+}
+
+static void _console_resume(void)
+{
+	console_timer.fire_tsc = rdtsc()
+			+ console_timer.period_in_cycle;
+	console_timer.mode = TICK_MODE_PERIODIC;
+	add_timer(&console_timer);
+	pr_acrnlog("Console resumed.");
+}
+
+static struct timer console_resume_timer;
+
+static int console_late_resume(__unused void *data)
+{
+	if (!serial_resume("STDIO")) {
+		_console_resume();
+		del_timer(&console_resume_timer);
+		console_resume_timer.mode = TICK_MODE_ONESHOT;
+	}
+	return 0;
+}
+
+int console_resume(void)
+{
+	uint64_t resume_tsc, fire_tsc;
+	int status;
+
+	if (serial_handle != SERIAL_INVALID_HANDLE) {
+		status = serial_resume("STDIO");
+		if (status) {
+			/* wait for io-chip re-initialized by kernel */
+			resume_tsc = us_to_ticks(1000000UL);
+			fire_tsc = rdtsc() + resume_tsc;
+			initialize_timer(&console_resume_timer,
+					console_late_resume,
+					NULL,
+					fire_tsc,
+					TICK_MODE_PERIODIC,
+					resume_tsc);
+
+			add_timer(&console_resume_timer);
+			return status;
+		}
+		_console_resume();
+	}
+
+	return 0;
+}

@@ -138,6 +138,8 @@ struct tgt_uart {
 	int (*init)(struct tgt_uart *tgt_uart);
 	int (*open)(struct tgt_uart *tgt_uart, struct uart_config *config);
 	void (*close)(struct tgt_uart *tgt_uart);
+	int (*suspend)(struct tgt_uart *tgt_uart);
+	int (*resume)(struct tgt_uart *tgt_uart, struct uart_config *config);
 	void (*read)(struct tgt_uart *tgt_uart,
 				void *buffer, uint32_t *bytes_read);
 	void (*write)(struct tgt_uart *tgt_uart,
@@ -180,5 +182,7 @@ int serial_getc(uint32_t uart_handle);
 int serial_gets(uint32_t uart_handle, char *buffer, uint32_t length);
 int serial_puts(uint32_t uart_handle, const char *s, uint32_t length);
 uint32_t serial_get_rx_data(uint32_t uart_handle);
+int serial_suspend(char *uart_id);
+int serial_resume(char *uart_id);
 
 #endif /* !SERIAL_INTER_H */

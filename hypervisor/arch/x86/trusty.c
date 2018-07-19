@@ -175,8 +175,8 @@ static void create_secure_world_ept(struct vm *vm, uint64_t gpa_orig,
 
 
 	nworld_pml4e = mem_read64(HPA2HVA(vm->arch_vm.nworld_eptp));
-	(void)memcpy_s(HPA2HVA(sworld_pml4e & IA32E_REF_MASK), CPU_PAGE_SIZE,
-			HPA2HVA(nworld_pml4e & IA32E_REF_MASK), CPU_PAGE_SIZE);
+	(void)memcpy_s(HPA2HVA(sworld_pml4e & IA32E_REF_MASK), CPU_PAGE_SIZE - 8,
+			HPA2HVA(nworld_pml4e & IA32E_REF_MASK), CPU_PAGE_SIZE - 8);
 
 	/* Map gpa_rebased~gpa_rebased+size
 	 * to secure ept mapping

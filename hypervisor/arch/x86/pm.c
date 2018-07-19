@@ -94,6 +94,9 @@ int enter_s3(struct vm *vm, uint32_t pm1a_cnt_val,
 	 * with this wakeup vec as entry.
 	 */
 	guest_wakeup_vec32 = *vm->pm.sx_state_data->wake_vector_32;
+	pr_acrnlog("System entering S3... wak32: %x, wak64: %lx",
+				*vm->pm.sx_state_data->wake_vector_32,
+				*vm->pm.sx_state_data->wake_vector_64);
 
 	/* set ACRN wakeup vec instead */
 	*vm->pm.sx_state_data->wake_vector_32 =
@@ -120,7 +123,8 @@ int enter_s3(struct vm *vm, uint32_t pm1a_cnt_val,
 	CPU_IRQ_DISABLE();
 	vmx_off(pcpu_id);
 
-	suspend_console();
+	console_suspend();
+	//suspend_console();
 	suspend_ioapic();
 	suspend_iommu();
 	suspend_lapic();
@@ -133,7 +137,8 @@ int enter_s3(struct vm *vm, uint32_t pm1a_cnt_val,
 	resume_lapic();
 	resume_iommu();
 	resume_ioapic();
-	resume_console();
+	//resume_console();
+	console_resume();
 
 	exec_vmxon_instr(pcpu_id);
 	CPU_IRQ_ENABLE();
