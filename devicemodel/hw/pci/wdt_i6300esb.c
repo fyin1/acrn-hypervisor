@@ -358,6 +358,18 @@ pci_wdt_init(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 	return 0;
 }
 
+int pci_wdt_resume(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	/* leave watchdog re-enable to guest */
+	return 0;
+}
+
+void pci_wdt_suspend(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
+{
+	/* stop watchdog timer when UOS suspend */
+	stop_wdt_timer();
+}
+
 static void
 pci_wdt_deinit(struct vmctx *ctx, struct pci_vdev *dev, char *opts)
 {
@@ -372,7 +384,9 @@ struct pci_vdev_ops pci_ops_wdt = {
 	.vdev_cfgwrite = pci_wdt_cfg_write,
 	.vdev_cfgread = pci_wdt_cfg_read,
 	.vdev_barwrite	= pci_wdt_bar_write,
-	.vdev_barread	= pci_wdt_bar_read
+	.vdev_barread	= pci_wdt_bar_read,
+	.vdev_resume	= pci_wdt_resume,
+	.vdev_suspend	= pci_wdt_suspend,
 };
 
 DEFINE_PCI_DEVTYPE(pci_ops_wdt);
