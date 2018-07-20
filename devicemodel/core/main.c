@@ -594,6 +594,22 @@ vm_system_reset(struct vmctx *ctx)
 }
 
 static void
+vm_suspend_vdevs(struct vmctx *ctx)
+{
+	/* for platform devices, we don't have suspend/resume callback yet.
+	 * So leave as it now. Will add supsend/resume callback for platform
+	 * devices later.
+	 */
+	suspend_pci(ctx);
+}
+
+static void
+vm_resume_vdevs(struct vmctx *ctx)
+{
+	resume_pci(ctx);
+}
+
+static void
 vm_suspend_resume(struct vmctx *ctx)
 {
 	int vcpu_id = 0;
@@ -618,10 +634,12 @@ vm_suspend_resume(struct vmctx *ctx)
 			vm_notify_request_done(ctx, vcpu_id);
 	}
 
+	vm_suspend_vdevs(ctx);
 	wait_for_resume(ctx);
 
 	pm_backto_wakeup(ctx);
-	vm_reset_vdevs(ctx);
+	vm_resume_vdevs(ctx);
+
 	vm_reset(ctx);
 }
 

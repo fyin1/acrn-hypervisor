@@ -1318,6 +1318,80 @@ deinit_pci(struct vmctx *ctx)
 	}
 }
 
+void
+suspend_pci(struct vmctx *ctx)
+{
+	struct pci_vdev_ops *ops;
+	struct businfo *bi;
+	struct slotinfo *si;
+	struct funcinfo *fi;
+	int bus, slot, func;
+
+	for (bus = 0; bus < MAXBUSES; bus++) {
+		bi = pci_businfo[bus];
+		if (bi == NULL)
+			continue;
+
+		for (slot = 0; slot < MAXSLOTS; slot++) {
+			si = &bi->slotinfo[slot];
+			for (func = 0; func < MAXFUNCS; func++) {
+				fi = &si->si_funcs[func];
+				if (fi->fi_name == NULL)
+					continue;
+
+				if (fi->fi_devi == NULL)
+					continue;
+
+				ops = pci_emul_finddev(fi->fi_name);
+				assert(ops != NULL);
+				if (ops->vdev_suspend)
+					(*ops->vdev_suspend)(ctx, fi->fi_devi,
+							fi->fi_param);
+
+				/* need to reset the msi/msix enable flags */
+				fi->fi_devi->msi.enabled = 0;
+				fi->fi_devi->msix.enabled = 0;
+			}
+		}
+	}
+}
+
+void
+resume_pci(struct vmctx *ctx)
+{
+	struct pci_vdev_ops *ops;
+	struct businfo *bi;
+	struct slotinfo *si;
+	struct funcinfo *fi;
+	int bus, slot, func;
+
+	for (bus = 0; bus < MAXBUSES; bus++) {
+		bi = pci_businfo[bus];
+		if (bi == NULL)
+			continue;
+
+		for (slot = 0; slot < MAXSLOTS; slot++) {
+			si = &bi->slotinfo[slot];
+			for (func = 0; func < MAXFUNCS; func++) {
+				fi = &si->si_funcs[func];
+				if (fi->fi_name == NULL)
+					continue;
+
+				if (fi->fi_devi == NULL)
+					continue;
+
+				ops = pci_emul_finddev(fi->fi_name);
+				assert(ops != NULL);
+				if (ops->vdev_resume) {
+					(*ops->vdev_resume)(ctx, fi->fi_devi,
+							fi->fi_param);
+				}
+
+			}
+		}
+	}
+}
+
 static void
 pci_apic_prt_entry(int bus, int slot, int pin, int pirq_pin, int ioapic_irq,
 		   void *arg)
