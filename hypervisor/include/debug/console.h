@@ -67,10 +67,7 @@ static inline void suspend_console(void)
 	del_timer(&console_timer);
 }
 
-static inline void resume_console(void)
-{
-	console_setup_timer();
-}
+void resume_console(void);
 
 #else
 static inline void console_init(void)

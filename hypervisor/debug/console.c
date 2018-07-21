@@ -222,3 +222,13 @@ void console_setup_timer(void)
 		pr_err("Failed to add console kick timer");
 	}
 }
+
+void resume_console(void)
+{
+#ifdef CONFIG_PLATFORM_SBL
+	volatile uint64_t *uart_cfg_addr = HPA2HVA(UART_CFG_ADDR);
+
+	uart16550_set_property(1, 0, *uart_cfg_addr & 0xfffffff0UL);
+#endif
+	console_setup_timer();
+}

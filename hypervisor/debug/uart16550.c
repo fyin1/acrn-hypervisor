@@ -130,6 +130,12 @@ static int uart16550_init(struct tgt_uart *tgt_uart)
 		status = -ENODEV;
 	} else {
 		if (strcmp(tgt_uart->uart_id, "STDIO") == 0) {
+#ifdef CONFIG_PLATFORM_SBL
+			volatile uint64_t *uart_cfg_addr =
+						HPA2HVA(UART_CFG_ADDR);
+
+			tgt_uart->base_address = *uart_cfg_addr & 0xfffffff0UL;
+#endif
 			atomic_store32(&tgt_uart->open_count, 0U);
 		} else {
 			/* set open count to 1 to prevent open */
