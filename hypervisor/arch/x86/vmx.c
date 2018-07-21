@@ -185,7 +185,7 @@ int exec_vmptrld(void *addr)
 		"pop %0\n"
 		: "=r" (rflags)
 		: "r"(addr)
-		: "%rax", "cc");
+		: "%rax", "cc", "memory");
 
 	/* if carry and zero flags are clear operation success */
 	if ((rflags & (RFLAGS_C | RFLAGS_Z)) != 0U) {
