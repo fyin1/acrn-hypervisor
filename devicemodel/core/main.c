@@ -565,10 +565,13 @@ vm_system_reset(struct vmctx *ctx)
 	}
 
 	vm_reset_vdevs(ctx);
-
-	acrn_sw_load(ctx);
 	vm_reset(ctx);
 	vm_set_suspend_mode(VM_SUSPEND_NONE);
+
+	/* set the BSP init state */
+	acrn_sw_load(ctx);
+	vm_set_vcpu_regs(ctx, &ctx->bsp_regs);
+	vm_run(ctx);
 }
 
 static void
@@ -605,6 +608,10 @@ vm_suspend_resume(struct vmctx *ctx)
 	pm_backto_wakeup(ctx);
 	vm_reset_watchdog(ctx);
 	vm_reset(ctx);
+
+	/* set the BSP init state */
+	vm_set_vcpu_regs(ctx, &ctx->bsp_regs);
+	vm_run(ctx);
 }
 
 static void
