@@ -287,6 +287,7 @@ uint64_t vcpu_get_pat_ext(struct vcpu *vcpu);
 void vcpu_set_pat_ext(struct vcpu *vcpu, uint64_t val);
 void set_vcpu_regs(struct vcpu *vcpu, struct acrn_vcpu_regs *vcpu_regs);
 void reset_vcpu_regs(struct vcpu *vcpu);
+void set_ap_entry(struct vcpu *vcpu, uint64_t entry);
 
 struct vcpu* get_ever_run_vcpu(uint16_t pcpu_id);
 int create_vcpu(uint16_t pcpu_id, struct vm *vm, struct vcpu **rtn_vcpu_handle);
