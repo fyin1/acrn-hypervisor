@@ -351,10 +351,10 @@ int reset_vm(struct vm *vm)
 
 	foreach_vcpu(i, vm, vcpu) {
 		reset_vcpu(vcpu);
-		if (is_vcpu_bsp(vcpu))
-			vm_sw_loader(vm, vcpu);
 
 		vcpu->arch_vcpu.cpu_mode = CPU_MODE_REAL;
+		if (is_vcpu_bsp(vcpu))
+			vm_sw_loader(vm, vcpu);
 	}
 
 	vioapic_reset(vm_ioapic(vm));
