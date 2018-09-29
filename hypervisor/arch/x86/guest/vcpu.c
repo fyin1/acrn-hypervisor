@@ -229,6 +229,29 @@ void set_vcpu_regs(struct vcpu *vcpu, struct acrn_vcpu_regs *vcpu_regs)
 	ctx->cr4 = vcpu_regs->cr4;
 }
 
+static struct acrn_vcpu_regs rm_init_regs = {
+	.gdt = {
+		.limit = 0xFFFFU,
+		.base = 0UL,
+	},
+	.idt = {
+		.limit = 0xFFFFU,
+		.base = 0UL,
+	},
+	.cs_ar = REAL_MODE_CODE_SEG_AR,
+	.cs_sel = REAL_MODE_BSP_INIT_CODE_SEL,
+	.cs_base = 0xFFFF0000UL,
+	.rip = 0xFFF0UL,
+	.cr0 = CR0_ET | CR0_NE,
+	.cr3 = 0UL,
+	.cr4 = 0UL,
+};
+
+void reset_vcpu_regs(struct vcpu *vcpu)
+{
+	set_vcpu_regs(vcpu, &rm_init_regs);
+}
+
 /***********************************************************************
  *  vcpu_id/pcpu_id mapping table:
  *
@@ -313,6 +336,7 @@ int create_vcpu(uint16_t pcpu_id, struct vm *vm, struct vcpu **rtn_vcpu_handle)
 	vcpu->pending_pre_work = 0U;
 	vcpu->state = VCPU_INIT;
 
+	reset_vcpu_regs(vcpu);
 	(void)memset(&vcpu->req, 0U, sizeof(struct io_request));
 
 	return 0;
@@ -485,6 +509,8 @@ void reset_vcpu(struct vcpu *vcpu)
 
 	vlapic = vcpu_vlapic(vcpu);
 	vlapic_reset(vlapic);
+
+	reset_vcpu_regs(vcpu);
 }
 
 void pause_vcpu(struct vcpu *vcpu, enum vcpu_state new_state)
