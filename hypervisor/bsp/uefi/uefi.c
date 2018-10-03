@@ -46,9 +46,6 @@ int uefi_sw_loader(struct vm *vm, struct vcpu *vcpu)
 
 	pr_dbg("Loading guest to run-time location");
 
-	if (!is_vm0(vm))
-		return load_guest(vm, vcpu);
-
 	vlapic_restore(vcpu_vlapic(vcpu), &uefi_lapic_regs);
 
 	/* For UEFI platform, the bsp init regs come from two places:
