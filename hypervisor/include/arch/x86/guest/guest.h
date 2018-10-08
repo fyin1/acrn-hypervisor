@@ -162,7 +162,6 @@ int copy_from_gva(struct vcpu *vcpu, void *h_ptr, uint64_t gva,
 int copy_to_gva(struct vcpu *vcpu, void *h_ptr, uint64_t gva,
 	uint32_t size, uint32_t *err_code, uint64_t *fault_addr);
 
-uint64_t create_guest_init_gdt(struct vm *vm, uint32_t *limit);
 extern uint8_t vm0_boot_context;
 
 #endif	/* !ASSEMBLER */
