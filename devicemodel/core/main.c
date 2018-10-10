@@ -76,6 +76,8 @@ char *vmname;
 int guest_ncpus;
 char *guest_uuid_str;
 char *vsbl_file_name;
+char *kernel_file_name;
+char *elf_file_name;
 uint8_t trusty_enabled;
 bool stdio_in_use;
 
@@ -136,6 +138,7 @@ usage(int code)
 		"       -c: # cpus (default 1)\n"
 		"       -C: include guest memory in core file\n"
 		"       -e: exit on unhandled I/O access\n"
+		"       -E: elf image path\n"
 		"       -g: gdb port\n"
 		"       -h: help\n"
 		"       -H: vmexit from the guest on hlt\n"
@@ -683,6 +686,7 @@ static struct option long_options[] = {
 	{"pincpu",		required_argument,	0, 'p' },
 	{"ncpus",		required_argument,	0, 'c' },
 	{"memflags_incore",	no_argument,		0, 'C' },
+	{"elf_file",		required_argument,	0, 'E' },
 	{"gdb_port",		required_argument,	0, 'g' },
 	{"lpc",			required_argument,	0, 'l' },
 	{"pci_slot",		required_argument,	0, 's' },
@@ -736,7 +740,7 @@ main(int argc, char *argv[])
 	if (signal(SIGINT, sig_handler_term) == SIG_ERR)
 		fprintf(stderr, "cannot register handler for SIGINT\n");
 
-	optstr = "abehuwxACHIPSWYvk:r:B:p:g:c:s:m:l:U:G:i:";
+	optstr = "abehuwxACHIPSWYvE:k:r:B:p:g:c:s:m:l:U:G:i:";
 	while ((c = getopt_long(argc, argv, optstr, long_options,
 			&option_idx)) != -1) {
 		switch (c) {
@@ -761,6 +765,13 @@ main(int argc, char *argv[])
 			break;
 		case 'C':
 			memflags |= VM_MEM_F_INCORE;
+			break;
+		case 'E':
+			fprintf(stderr, "elf file: %s\n", optarg);
+			if (acrn_parse_elf(optarg) != 0)
+				exit(1);
+			else
+				break;
 			break;
 		case 'g':
 			gdb_port = atoi(optarg);
