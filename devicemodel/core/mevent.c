@@ -56,10 +56,13 @@ static int mevent_pipefd[2];
 static pthread_mutex_t mevent_lmutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct mevent {
-	void			(*me_func)(int, enum ev_type, void *);
+	void			(*run)(int, enum ev_type, void *);
+	void			*run_param;
+	void			(*teardown)(void *);
+	void			*teardown_param;
+
 	int			me_fd;
 	enum			ev_type me_type;
-	void			*me_param;
 	int			me_cq;
 	int			me_state;
 
@@ -152,12 +155,15 @@ mevent_destroy(void)
 		LIST_REMOVE(mevp, me_list);
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, mevp->me_fd, NULL);
 
-		if ((mevp->me_type == EVF_READ ||
-		     mevp->me_type == EVF_READ_ET ||
-		     mevp->me_type == EVF_WRITE ||
-		     mevp->me_type == EVF_WRITE_ET) &&
-		     mevp->me_fd != STDIN_FILENO)
-			close(mevp->me_fd);
+               if ((mevp->me_type == EVF_READ ||
+                    mevp->me_type == EVF_READ_ET ||
+                    mevp->me_type == EVF_WRITE ||
+                    mevp->me_type == EVF_WRITE_ET) &&
+                    mevp->me_fd != STDIN_FILENO)
+                       close(mevp->me_fd);
+
+		if (mevp->teardown)
+			mevp->teardown(mevp->teardown_param);
 
 		free(mevp);
 	}
@@ -166,12 +172,15 @@ mevent_destroy(void)
 		LIST_REMOVE(mevp, me_list);
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, mevp->me_fd, NULL);
 
-		if ((mevp->me_type == EVF_READ ||
-		     mevp->me_type == EVF_READ_ET ||
-		     mevp->me_type == EVF_WRITE ||
-		     mevp->me_type == EVF_WRITE_ET) &&
-		     mevp->me_fd != STDIN_FILENO)
-			close(mevp->me_fd);
+               if ((mevp->me_type == EVF_READ ||
+                    mevp->me_type == EVF_READ_ET ||
+                    mevp->me_type == EVF_WRITE ||
+                    mevp->me_type == EVF_WRITE_ET) &&
+                    mevp->me_fd != STDIN_FILENO)
+                       close(mevp->me_fd);
+
+		if (mevp->teardown)
+			mevp->teardown(mevp->teardown_param);
 
 		free(mevp);
 	}
@@ -189,19 +198,20 @@ mevent_handle(struct epoll_event *kev, int numev)
 		/* XXX check for EV_ERROR ? */
 
 		if (mevp->me_state)
-			(*mevp->me_func)(mevp->me_fd, mevp->me_type, mevp->me_param);
+			(*mevp->run)(mevp->me_fd, mevp->me_type, mevp->run_param);
 	}
 }
 
 struct mevent *
 mevent_add(int tfd, enum ev_type type,
-	   void (*func)(int, enum ev_type, void *), void *param)
+	   void (*run)(int, enum ev_type, void *), void *run_param,
+	   void (*teardown)(void *), void *teardown_param)
 {
 	int ret;
 	struct epoll_event ee;
 	struct mevent *lp, *mevp;
 
-	if (tfd < 0 || func == NULL)
+	if (tfd < 0 || run == NULL)
 		return NULL;
 
 	if (type == EVF_TIMER)
@@ -226,9 +236,12 @@ mevent_add(int tfd, enum ev_type type,
 
 	mevp->me_fd = tfd;
 	mevp->me_type = type;
-	mevp->me_func = func;
-	mevp->me_param = param;
 	mevp->me_state = 1;
+
+	mevp->run = run;
+	mevp->run_param = run_param;
+	mevp->teardown = teardown;
+	mevp->teardown_param = teardown_param;
 
 	ee.events = mevent_kq_filter(mevp);
 	ee.data.ptr = mevp;
@@ -240,6 +253,8 @@ mevent_add(int tfd, enum ev_type type,
 
 		return mevp;
 	} else {
+		if (mevp->teardown)
+			mevp->teardown(mevp->teardown_param);
 		free(mevp);
 		return NULL;
 	}
@@ -310,6 +325,9 @@ mevent_drain_del_list(void)
 		if (evp->closefd) {
 			close(evp->me_fd);
 		}
+
+		if (evp->teardown)
+			evp->teardown(evp->teardown_param);
 		free(evp);
 	}
 	mevent_qunlock();
@@ -327,6 +345,14 @@ mevent_delete_event(struct mevent *evp, int closefd)
 		mevent_add_to_del_list(evp, closefd);
 	} else {
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, evp->me_fd, NULL);
+
+		if (evp->closefd) {
+			close(evp->me_fd);
+		}
+
+		if (evp->teardown)
+			evp->teardown(evp->teardown_param);
+		free(evp);
 	}
 	return 0;
 }
@@ -395,7 +421,7 @@ mevent_dispatch(void)
 	/*
 	 * Add internal event handler for the pipe write fd
 	 */
-	pipev = mevent_add(mevent_pipefd[0], EVF_READ, mevent_pipe_read, NULL);
+	pipev = mevent_add(mevent_pipefd[0], EVF_READ, mevent_pipe_read, NULL, NULL, NULL);
 	assert(pipev != NULL);
 
 	for (;;) {

@@ -350,7 +350,6 @@ vmei_host_client_destroy(const struct refcnt *ref)
 {
 	struct vmei_host_client *hclient;
 	struct vmei_me_client *mclient;
-	unsigned int i;
 
 	hclient = container_of(ref, struct vmei_host_client, ref);
 
@@ -362,10 +361,20 @@ vmei_host_client_destroy(const struct refcnt *ref)
 
 	if (hclient->rx_mevp)
 		mevent_delete(hclient->rx_mevp);
+
 	if (hclient->client_fd > -1)
 		close(hclient->client_fd);
+}
+
+static void
+vmei_rx_teardown(void *param)
+{
+	unsigned int i;
+	struct vmei_host_client *hclient = param;
+
 	for (i = 0; i < VMEI_IOBUFS_MAX; i++)
 		free(hclient->send_bufs.bufs[i].iov_base);
+
 	free(hclient->recv_buf);
 	free(hclient);
 }
@@ -988,7 +997,7 @@ vmei_host_client_native_connect(struct vmei_host_client *hclient)
 
 	/* add READ event into mevent */
 	hclient->rx_mevp = mevent_add(hclient->client_fd, EVF_READ,
-				      vmei_rx_callback, hclient);
+				      vmei_rx_callback, hclient, vmei_rx_teardown, hclient);
 	if (!hclient->rx_mevp)
 		return MEI_HBM_REJECTED;
 
@@ -1922,7 +1931,7 @@ vmei_start(struct virtio_mei *vmei, bool do_rescan)
 
 	hclient->client_fd = pipefd[0];
 	hclient->rx_mevp = mevent_add(hclient->client_fd, EVF_READ,
-				      vmei_rx_callback, hclient);
+				      vmei_rx_callback, hclient, vmei_rx_teardown, hclient);
 	vmei->hbm_fd = pipefd[1];
 
 	if (do_rescan) {
@@ -2015,7 +2024,7 @@ static int vmei_add_reset_event(struct virtio_mei *vmei)
 		return -errno;
 
 	vmei->reset_mevp = mevent_add(dev_state_fd, EVF_READ_ET,
-				      vmei_reset_callback, vmei);
+		vmei_reset_callback, vmei, NULL, NULL);
 	if (!vmei->reset_mevp) {
 		close(dev_state_fd);
 		return -ENOMEM;
