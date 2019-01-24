@@ -9,7 +9,11 @@
 
 #ifdef PROFILING_ON
 
-#define MAX_MSR_LIST_NUM	15U
+#include <vcpu.h>
+
+#define MAX_MSR_LIST_NUM       15U
+#define MAX_PROFILING_MSR_LIST_NUM	(MAX_MSR_LIST_NUM)
+#define	MAX_HV_MSR_LIST_NUM		(MSR_AREA_COUNT)
 #define MAX_GROUP_NUM		1U
 
 #define COLLECT_PROFILE_DATA	0
@@ -210,7 +214,7 @@ struct sep_state {
 	uint32_t frozen_delayed;
 	uint32_t nofrozen_pmi;
 
-	struct vmexit_msr vmexit_msr_list[MAX_MSR_LIST_NUM];
+	struct msr_store_entry vmexit_msr_list[MAX_PROFILING_MSR_LIST_NUM + MAX_HV_MSR_LIST_NUM];
 	int32_t vmexit_msr_cnt;
 	uint64_t guest_debugctl_value;
 	uint64_t saved_debugctl_value;
