@@ -212,6 +212,7 @@ C_SRCS += arch/x86/guest/virtual_cr.c
 C_SRCS += arch/x86/guest/vmcs.c
 C_SRCS += arch/x86/guest/vmexit.c
 S_SRCS += arch/x86/guest/vmx_asm.S
+S_SRCS += arch/x86/guest/oem_acpi_bin.S
 C_SRCS += arch/x86/guest/trusty.c
 C_SRCS += arch/x86/guest/vm_reset.c
 C_SRCS += arch/x86/cat.c
