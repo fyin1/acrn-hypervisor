@@ -237,6 +237,8 @@ void init_pcpu_post(uint16_t pcpu_id)
 			panic("Failed to start all secondary cores!");
 		}
 
+		overwrite_acpi_tables();
+
 		ASSERT(get_pcpu_id() == BOOT_CPU_ID, "");
 	} else {
 		pr_dbg("Core %hu is up", pcpu_id);
