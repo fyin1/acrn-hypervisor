@@ -35,11 +35,15 @@
 */
 
 #include <vm.h>
+#include <errno.h>
+#include <logmsg.h>
 #include <pci.h>
 #include "vpci_priv.h"
 
 void vhostbridge_init(struct pci_vdev *vdev)
 {
+	pr_err("%s: enter", __func__);
+
 	/* PCI config space */
 	pci_vdev_write_cfg_u16(vdev, PCIR_VENDOR, (uint16_t)0x8086U);
 	pci_vdev_write_cfg_u16(vdev, PCIR_DEVICE, (uint16_t)0x5af0U);
@@ -85,11 +89,13 @@ void vhostbridge_init(struct pci_vdev *vdev)
 
 void vhostbridge_deinit(__unused const struct pci_vdev *vdev)
 {
+	pr_err("%s: enter", __func__);
 }
 
 int32_t vhostbridge_cfgread(const struct pci_vdev *vdev, uint32_t offset,
 	uint32_t bytes, uint32_t *val)
 {
+	pr_err("%s: enter", __func__);
 	*val = pci_vdev_read_cfg(vdev, offset, bytes);
 
 	return 0;
@@ -98,6 +104,7 @@ int32_t vhostbridge_cfgread(const struct pci_vdev *vdev, uint32_t offset,
 int32_t vhostbridge_cfgwrite(struct pci_vdev *vdev, uint32_t offset,
 	uint32_t bytes, uint32_t val)
 {
+	pr_err("%s: enter", __func__);
 	if (!pci_bar_access(offset)) {
 		pci_vdev_write_cfg(vdev, offset, bytes, val);
 	}

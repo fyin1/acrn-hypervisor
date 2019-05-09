@@ -502,11 +502,15 @@ void sharing_mode_cfgread(__unused struct acrn_vpci *vpci, union pci_bdf bdf,
 
 	/* vdev == NULL: Could be hit for PCI enumeration from guests */
 	if (vdev != NULL) {
-		if ((vmsi_cfgread(vdev, offset, bytes, val) != 0)
-			&& (vmsix_cfgread(vdev, offset, bytes, val) != 0)
-			) {
-			/* Not handled by any handlers, passthru to physical device */
-			*val = pci_pdev_read_cfg(vdev->pdev->bdf, offset, bytes);
+		if (is_hostbridge(vdev)) {
+			(void)vhostbridge_cfgread(vdev, offset, bytes, val);
+		} else {
+			if ((vmsi_cfgread(vdev, offset, bytes, val) != 0)
+					&& (vmsix_cfgread(vdev, offset, bytes, val) != 0)
+			   ) {
+				/* Not handled by any handlers, passthru to physical device */
+				*val = pci_pdev_read_cfg(vdev->pdev->bdf, offset, bytes);
+			}
 		}
 	}
 }
@@ -520,11 +524,15 @@ void sharing_mode_cfgwrite(__unused struct acrn_vpci *vpci, union pci_bdf bdf,
 	struct pci_vdev *vdev = sharing_mode_find_vdev_sos(bdf);
 
 	if (vdev != NULL) {
-		if ((vmsi_cfgwrite(vdev, offset, bytes, val) != 0)
-			&& (vmsix_cfgwrite(vdev, offset, bytes, val) != 0)
-			) {
-			/* Not handled by any handlers, passthru to physical device */
-			pci_pdev_write_cfg(vdev->pdev->bdf, offset, bytes, val);
+		if (is_hostbridge(vdev)) {
+			(void)vhostbridge_cfgwrite(vdev, offset, bytes, val);
+		} else {
+			if ((vmsi_cfgwrite(vdev, offset, bytes, val) != 0)
+					&& (vmsix_cfgwrite(vdev, offset, bytes, val) != 0)
+			   ) {
+				/* Not handled by any handlers, passthru to physical device */
+				pci_pdev_write_cfg(vdev->pdev->bdf, offset, bytes, val);
+			}
 		}
 	}
 }
@@ -548,15 +556,19 @@ static void init_vdev_for_pdev(struct pci_pdev *pdev, const void *vm)
 		vdev->vbdf = pdev->bdf;
 		vdev->pdev = pdev;
 
-		vmsi_init(vdev);
+		if (is_hostbridge(vdev)) {
+			vhostbridge_init(vdev);
+		} else {
+			vmsi_init(vdev);
 
-		vmsix_init(vdev);
+			vmsix_init(vdev);
 
-		if (has_msix_cap(vdev)) {
-			vdev_pt_remap_msix_table_bar(vdev);
+			if (has_msix_cap(vdev)) {
+				vdev_pt_remap_msix_table_bar(vdev);
+			}
+
+			assign_vdev_pt_iommu_domain(vdev);
 		}
-
-		assign_vdev_pt_iommu_domain(vdev);
 	}
 }
 
@@ -591,11 +603,15 @@ void sharing_mode_vpci_deinit(const struct acrn_vm *vm)
 	for (i = 0U; i < vm->vpci.pci_vdev_cnt; i++) {
 		vdev = (struct pci_vdev *)&(vm->vpci.pci_vdevs[i]);
 
-		remove_vdev_pt_iommu_domain(vdev);
+		if (is_hostbridge(vdev)) {
+			vhostbridge_deinit(vdev);
+		} else {
+			remove_vdev_pt_iommu_domain(vdev);
 
-		vmsi_deinit(vdev);
+			vmsi_deinit(vdev);
 
-		vmsix_deinit(vdev);
+			vmsix_deinit(vdev);
+		}
 	}
 }
 
