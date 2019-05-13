@@ -246,6 +246,7 @@ C_SRCS += dm/vpci/vdev.c
 C_SRCS += dm/vpci/vpci.c
 C_SRCS += dm/vmptable.c
 C_SRCS += dm/vpci/vhostbridge.c
+C_SRCS += dm/vpci/vpcibridge.c
 C_SRCS += dm/vpci/pci_pt.c
 C_SRCS += dm/vpci/vmsi.c
 C_SRCS += dm/vpci/vmsix.c

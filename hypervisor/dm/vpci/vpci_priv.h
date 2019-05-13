@@ -76,6 +76,7 @@ static inline bool has_msix_cap(const struct pci_vdev *vdev)
 }
 
 extern struct pci_vdev_ops vhostbridge_ops;
+extern struct pci_vdev_ops vpcibridge_ops;
 
 int32_t vdev_pt_cfgread(const struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t *val);
 int32_t vdev_pt_cfgwrite(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t val);

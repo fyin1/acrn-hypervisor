@@ -269,6 +269,25 @@ static inline bool is_hostbridge(const struct pci_vdev *vdev)
 }
 
 /**
+ * @pre vdev != NULL
+ */
+static inline bool is_pcibridge(const struct pci_pdev *pdev)
+{
+	uint8_t  hdr_type, cls, sub_cls;
+
+	hdr_type = (uint8_t)pci_pdev_read_cfg(pdev->bdf, PCIR_HDRTYPE, 1U);
+	cls = (uint8_t)pci_pdev_read_cfg(pdev->bdf, PCIR_CLASS, 1U);
+	sub_cls = (uint8_t)pci_pdev_read_cfg(pdev->bdf, PCIR_SUBCLASS, 1U);
+
+	/* if (type is bridge) and (class is bridge) and ((sub class is PCI bridge) or 
+	 * (sub class is transparent PCI bridge))
+	 */
+	return (((hdr_type & PCIM_HDRTYPE) == PCIM_HDRTYPE_BRIDGE) &&
+		(cls == PCIC_BRIDGE) && ((sub_cls == PCIS_BRIDGE_PCI) ||
+		 (sub_cls == PCIS_BRIDGE_PCI_TRANSPARENT)));
+}
+
+/**
  * @pre bar != NULL
  */
 static inline bool is_valid_bar_type(const struct pci_bar *bar)
@@ -600,6 +619,9 @@ static void init_vdev_for_pdev(struct pci_pdev *pdev, const void *vm)
 
 		if (is_hostbridge(vdev)) {
 			vdev->vdev_ops = &vhostbridge_ops;
+		} else if (is_pcibridge(pdev)) {
+			pr_err("vpcibridge added");
+			vdev->vdev_ops = &vpcibridge_ops;
 		} else {
 			vdev->vdev_ops = &share_mode_vdev_ops;
 		}
