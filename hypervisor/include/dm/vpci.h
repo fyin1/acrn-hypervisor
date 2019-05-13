@@ -64,6 +64,14 @@ union pci_cfgdata {
 	uint32_t data_32[(PCI_REGMAX + 1U) >> 4U];
 };
 
+struct pci_vdev;
+struct pci_vdev_ops {
+	void         (*init)(struct pci_vdev *vdev, void *arg);
+	void         (*deinit)(struct pci_vdev *vdev, void *arg);
+	int32_t      (*cfgwrite)(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t val);
+	int32_t      (*cfgread)(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t *val);
+};
+
 struct pci_vdev {
 	const struct acrn_vpci *vpci;
 	/* The bus/device/function triple of the virtual PCI device. */
@@ -78,6 +86,8 @@ struct pci_vdev {
 
 	struct pci_msi msi;
 	struct pci_msix msix;
+
+	struct pci_vdev_ops *vdev_ops;
 };
 
 struct pci_addr_info {

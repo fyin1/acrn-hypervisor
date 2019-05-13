@@ -373,6 +373,99 @@ static void partition_mode_pdev_init(struct pci_vdev *vdev, union pci_bdf pbdf)
 	assign_vdev_pt_iommu_domain(vdev);
 }
 
+static void general_vpci_deinit(struct pci_vdev *vdev, void *arg)
+{
+	(void)arg;
+
+	remove_vdev_pt_iommu_domain(vdev);
+	vmsi_deinit(vdev);
+	vmsix_deinit(vdev);
+}
+
+static void part_mode_vpci_init(struct pci_vdev *vdev, void *arg)
+{
+	struct acrn_vm_pci_ptdev_config *ptdev_config =
+		(struct acrn_vm_pci_ptdev_config *)arg;
+
+	partition_mode_pdev_init(vdev, ptdev_config->pbdf);
+	vmsi_init(vdev);
+	vmsix_init(vdev);
+}
+
+static int32_t part_mode_vpci_cfgread(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t *val)
+{
+	if ((vdev_pt_cfgread(vdev, offset, bytes, val) != 0) &&
+		(vmsi_cfgread(vdev, offset, bytes, val) != 0) &&
+		(vmsix_cfgread(vdev, offset, bytes, val) != 0)) {
+		/* Not handled by any handlers, passthru to physical device */
+		*val = pci_pdev_read_cfg(vdev->pdev->bdf, offset, bytes);
+	}
+
+	return 0;
+}
+
+static int32_t part_mode_vpci_cfgwrite(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t val)
+{
+	if ((vdev_pt_cfgwrite(vdev, offset, bytes, val) != 0) &&
+		(vmsi_cfgwrite(vdev, offset, bytes, val) != 0) &&
+		(vmsix_cfgwrite(vdev, offset, bytes, val) != 0)) {
+		/* Not handled by any handlers, passthru to physical device */
+		pci_pdev_write_cfg(vdev->pdev->bdf, offset, bytes, val);
+	}
+
+	return 0;
+}
+
+static struct pci_vdev_ops part_mode_vdev_ops = {
+	.init        = part_mode_vpci_init,
+	.deinit      = general_vpci_deinit,
+	.cfgwrite    = part_mode_vpci_cfgwrite,
+	.cfgread     = part_mode_vpci_cfgread,
+};
+
+static void share_mode_vpci_init(struct pci_vdev *vdev, void *arg)
+{
+	(void)arg;
+
+	vmsi_init(vdev);
+	vmsix_init(vdev);
+
+	if (has_msix_cap(vdev)) {
+		vdev_pt_remap_msix_table_bar(vdev);
+	}
+
+	assign_vdev_pt_iommu_domain(vdev);
+}
+
+static int32_t share_mode_vpci_cfgread(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t *val)
+{
+	if ((vmsi_cfgread(vdev, offset, bytes, val) != 0) &&
+		(vmsix_cfgread(vdev, offset, bytes, val) != 0)) {
+		/* Not handled by any handlers, passthru to physical device */
+		*val = pci_pdev_read_cfg(vdev->pdev->bdf, offset, bytes);
+	}
+
+	return 0;
+}
+
+static int32_t share_mode_vpci_cfgwrite(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t val)
+{
+	if ((vmsi_cfgwrite(vdev, offset, bytes, val) != 0) &&
+		(vmsix_cfgwrite(vdev, offset, bytes, val) != 0)) {
+		/* Not handled by any handlers, passthru to physical device */
+		pci_pdev_write_cfg(vdev->pdev->bdf, offset, bytes, val);
+	}
+
+	return 0;
+}
+
+static struct pci_vdev_ops share_mode_vdev_ops = {
+	.init        = share_mode_vpci_init,
+	.deinit      = general_vpci_deinit,
+	.cfgwrite    = share_mode_vpci_cfgwrite,
+	.cfgread     = share_mode_vpci_cfgread,
+};
+
 /**
  * @pre vm != NULL
  * @pre vm->vpci.pci_vdev_cnt <= CONFIG_MAX_PCI_DEV_NUM
@@ -398,14 +491,13 @@ int32_t partition_mode_vpci_init(struct acrn_vm *vm)
 		vdev->vbdf.value = ptdev_config->vbdf.value;
 
 		if (is_hostbridge(vdev)) {
-			vhostbridge_init(vdev);
+			vdev->vdev_ops = &vhostbridge_ops;
 		} else {
-			partition_mode_pdev_init(vdev, ptdev_config->pbdf);
-
-			vmsi_init(vdev);
-
-			vmsix_init(vdev);
+			vdev->vdev_ops = &part_mode_vdev_ops;
 		}
+
+		if (vdev->vdev_ops->init)
+			vdev->vdev_ops->init(vdev, ptdev_config);
 	}
 
 	return 0;
@@ -422,16 +514,8 @@ void partition_mode_vpci_deinit(const struct acrn_vm *vm)
 
 	for (i = 0U; i < vm->vpci.pci_vdev_cnt; i++) {
 		vdev = (struct pci_vdev *) &(vm->vpci.pci_vdevs[i]);
-
-		if (is_hostbridge(vdev)) {
-			vhostbridge_deinit(vdev);
-		} else {
-			remove_vdev_pt_iommu_domain(vdev);
-
-			vmsi_deinit(vdev);
-
-			vmsix_deinit(vdev);
-		}
+		if (vdev->vdev_ops->deinit)
+			vdev->vdev_ops->deinit(vdev, NULL);
 	}
 }
 
@@ -443,19 +527,8 @@ void partition_mode_cfgread(const struct acrn_vpci *vpci, union pci_bdf vbdf,
 {
 	struct pci_vdev *vdev = pci_find_vdev_by_vbdf(vpci, vbdf);
 
-	if (vdev != NULL) {
-		if (is_hostbridge(vdev)) {
-			(void)vhostbridge_cfgread(vdev, offset, bytes, val);
-		} else {
-			if ((vdev_pt_cfgread(vdev, offset, bytes, val) != 0)
-				&& (vmsi_cfgread(vdev, offset, bytes, val) != 0)
-				&& (vmsix_cfgread(vdev, offset, bytes, val) != 0)
-				) {
-				/* Not handled by any handlers, passthru to physical device */
-				*val = pci_pdev_read_cfg(vdev->pdev->bdf, offset, bytes);
-			}
-		}
-	}
+	if (vdev != NULL && vdev->vdev_ops->cfgread)
+		vdev->vdev_ops->cfgread(vdev, offset, bytes, val);
 }
 
 /**
@@ -466,19 +539,8 @@ void partition_mode_cfgwrite(const struct acrn_vpci *vpci, union pci_bdf vbdf,
 {
 	struct pci_vdev *vdev = pci_find_vdev_by_vbdf(vpci, vbdf);
 
-	if (vdev != NULL) {
-		if (is_hostbridge(vdev)) {
-			(void)vhostbridge_cfgwrite(vdev, offset, bytes, val);
-		} else {
-			if ((vdev_pt_cfgwrite(vdev, offset, bytes, val) != 0)
-				&& (vmsi_cfgwrite(vdev, offset, bytes, val) != 0)
-				&& (vmsix_cfgwrite(vdev, offset, bytes, val) != 0)
-				) {
-				/* Not handled by any handlers, passthru to physical device */
-				pci_pdev_write_cfg(vdev->pdev->bdf, offset, bytes, val);
-			}
-		}
-	}
+	if (vdev != NULL && vdev->vdev_ops->cfgread)
+		vdev->vdev_ops->cfgwrite(vdev, offset, bytes, val);
 }
 
 static struct pci_vdev *sharing_mode_find_vdev_sos(union pci_bdf pbdf)
@@ -501,18 +563,8 @@ void sharing_mode_cfgread(__unused struct acrn_vpci *vpci, union pci_bdf bdf,
 	*val = ~0U;
 
 	/* vdev == NULL: Could be hit for PCI enumeration from guests */
-	if (vdev != NULL) {
-		if (is_hostbridge(vdev)) {
-			(void)vhostbridge_cfgread(vdev, offset, bytes, val);
-		} else {
-			if ((vmsi_cfgread(vdev, offset, bytes, val) != 0)
-					&& (vmsix_cfgread(vdev, offset, bytes, val) != 0)
-			   ) {
-				/* Not handled by any handlers, passthru to physical device */
-				*val = pci_pdev_read_cfg(vdev->pdev->bdf, offset, bytes);
-			}
-		}
-	}
+	if (vdev != NULL && vdev->vdev_ops->cfgread)
+		(void)vdev->vdev_ops->cfgread(vdev, offset, bytes, val);
 }
 
 /**
@@ -523,18 +575,8 @@ void sharing_mode_cfgwrite(__unused struct acrn_vpci *vpci, union pci_bdf bdf,
 {
 	struct pci_vdev *vdev = sharing_mode_find_vdev_sos(bdf);
 
-	if (vdev != NULL) {
-		if (is_hostbridge(vdev)) {
-			(void)vhostbridge_cfgwrite(vdev, offset, bytes, val);
-		} else {
-			if ((vmsi_cfgwrite(vdev, offset, bytes, val) != 0)
-					&& (vmsix_cfgwrite(vdev, offset, bytes, val) != 0)
-			   ) {
-				/* Not handled by any handlers, passthru to physical device */
-				pci_pdev_write_cfg(vdev->pdev->bdf, offset, bytes, val);
-			}
-		}
-	}
+	if (vdev != NULL && vdev->vdev_ops->cfgread)
+		(void)vdev->vdev_ops->cfgwrite(vdev, offset, bytes, val);
 }
 
 /**
@@ -557,21 +599,15 @@ static void init_vdev_for_pdev(struct pci_pdev *pdev, const void *vm)
 		vdev->pdev = pdev;
 
 		if (is_hostbridge(vdev)) {
-			vhostbridge_init(vdev);
+			vdev->vdev_ops = &vhostbridge_ops;
 		} else {
-			vmsi_init(vdev);
-
-			vmsix_init(vdev);
-
-			if (has_msix_cap(vdev)) {
-				vdev_pt_remap_msix_table_bar(vdev);
-			}
-
-			assign_vdev_pt_iommu_domain(vdev);
+			vdev->vdev_ops = &share_mode_vdev_ops;
 		}
+
+		if (vdev->vdev_ops->init)
+			vdev->vdev_ops->init(vdev, NULL);
 	}
 }
-
 
 /**
  * @pre vm != NULL
@@ -602,16 +638,8 @@ void sharing_mode_vpci_deinit(const struct acrn_vm *vm)
 
 	for (i = 0U; i < vm->vpci.pci_vdev_cnt; i++) {
 		vdev = (struct pci_vdev *)&(vm->vpci.pci_vdevs[i]);
-
-		if (is_hostbridge(vdev)) {
-			vhostbridge_deinit(vdev);
-		} else {
-			remove_vdev_pt_iommu_domain(vdev);
-
-			vmsi_deinit(vdev);
-
-			vmsix_deinit(vdev);
-		}
+		if (vdev->vdev_ops->deinit)
+			vdev->vdev_ops->deinit(vdev, NULL);
 	}
 }
 

@@ -40,8 +40,10 @@
 #include <pci.h>
 #include "vpci_priv.h"
 
-void vhostbridge_init(struct pci_vdev *vdev)
+static void vhostbridge_init(struct pci_vdev *vdev, void *arg)
 {
+	(void)arg;
+
 	pr_err("%s: enter", __func__);
 
 	/* PCI config space */
@@ -87,12 +89,12 @@ void vhostbridge_init(struct pci_vdev *vdev)
 	pci_vdev_write_cfg_u8(vdev, 0xf7U, (uint8_t)0x1U);
 }
 
-void vhostbridge_deinit(__unused const struct pci_vdev *vdev)
+static void vhostbridge_deinit(__unused struct pci_vdev *vdev, __unused void *arg)
 {
 	pr_err("%s: enter", __func__);
 }
 
-int32_t vhostbridge_cfgread(const struct pci_vdev *vdev, uint32_t offset,
+static int32_t vhostbridge_cfgread(struct pci_vdev *vdev, uint32_t offset,
 	uint32_t bytes, uint32_t *val)
 {
 	pr_err("%s: enter", __func__);
@@ -101,7 +103,7 @@ int32_t vhostbridge_cfgread(const struct pci_vdev *vdev, uint32_t offset,
 	return 0;
 }
 
-int32_t vhostbridge_cfgwrite(struct pci_vdev *vdev, uint32_t offset,
+static int32_t vhostbridge_cfgwrite(struct pci_vdev *vdev, uint32_t offset,
 	uint32_t bytes, uint32_t val)
 {
 	pr_err("%s: enter", __func__);
@@ -111,3 +113,10 @@ int32_t vhostbridge_cfgwrite(struct pci_vdev *vdev, uint32_t offset,
 
 	return 0;
 }
+
+struct pci_vdev_ops vhostbridge_ops = {
+	.init        = vhostbridge_init,
+	.deinit      = vhostbridge_deinit,
+	.cfgwrite    = vhostbridge_cfgwrite,
+	.cfgread     = vhostbridge_cfgread,
+};
