@@ -53,6 +53,9 @@
 
 #define ACPI_SIG_FACS		0x53434146U	/* "FACS" */
 #define ACPI_SIG_FADT             "FACP" 	/* Fixed ACPI Description Table */
+#define ACPI_SIG_DSDT             "DSDT"
+#define ACPI_DSDT_OFFSET           40U
+#define ACPI_NAME_SIZE             4U
 
 /* FACP field offsets */
 #define OFFSET_FACS_ADDR	36U
@@ -132,6 +135,32 @@ static void *get_facs_table(const uint8_t *facp_addr)
 		}
 	}
 	return (void *)facs_addr;
+}
+
+static void overwrite_acpi_table(const char *signature, const uint8_t *oem_acpi_table, size_t size)
+{
+	uint8_t *acpi_table_addr;
+
+	stac();
+	if (strncmp(ACPI_SIG_DSDT, signature, ACPI_NAME_SIZE) == 0) {
+		uint8_t *facp_addr;
+
+		facp_addr = (uint8_t *)get_acpi_tbl(ACPI_SIG_FADT);
+		acpi_table_addr = (uint8_t *)(uint64_t)get_acpi_dt_dword(facp_addr, ACPI_DSDT_OFFSET);
+	} else {
+		acpi_table_addr = (uint8_t *)get_acpi_tbl(signature);
+	}
+
+	memcpy_s(acpi_table_addr, size, oem_acpi_table, size);
+	clac();
+
+	return;
+}
+
+void overwrite_acpi_tables(void)
+{
+	overwrite_acpi_table(ACPI_SIG_DSDT, &oem_dsdt_start, (&oem_dsdt_end - &oem_dsdt_start));
+	overwrite_acpi_table(ACPI_SIG_FADT, &oem_facp_start, (&oem_facp_end - &oem_facp_start));
 }
 
 /* put all ACPI fix up code here */
