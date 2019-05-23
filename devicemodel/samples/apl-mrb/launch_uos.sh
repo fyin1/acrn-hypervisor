@@ -449,9 +449,9 @@ fi
 
 echo "dm_run: before offline cpu" > /dev/kmsg
 # offline SOS CPUs except BSP before launch UOS
-for i in `ls -d /sys/devices/system/cpu/cpu[1-99]`; do
+for i in `ls -d /sys/devices/system/cpu/cpu[2-99]`; do
         online=`cat $i/online`
-        idx=`echo $i | tr -cd "[1-99]"`
+        idx=`echo $i | tr -cd "[2-99]"`
         echo cpu$idx online=$online
         if [ "$online" = "1" ]; then
                 echo 0 > $i/online
@@ -469,10 +469,10 @@ echo "dm_run: after offline cpu" > /dev/kmsg
 
 case $launch_type in
 	1) echo "Launch clearlinux UOS"
-		launch_clearlinux 1 3 "64 448 8" 0x070F00 clearlinux "LaaG" $debug
+		launch_clearlinux 1 2 "64 448 8" 0x070F00 clearlinux "LaaG" $debug
 		;;
 	2) echo "Launch android UOS"
-		launch_android 1 3 "64 448 8" 0x070F00 android "AaaG" $debug
+		launch_android 1 2 "64 448 8" 0x070F00 android "AaaG" $debug
 		;;
 	3) echo "Launch clearlinux UOS + android UOS"
 		launch_android 1 2 "64 448 4" 0x00000C android "AaaG" $debug &
@@ -485,7 +485,7 @@ case $launch_type in
 		launch_clearlinux 2 1 "64 448 4" 0x070F00 clearlinux_dup "L2aaG" $debug
 		;;
 	5) echo "Launch alios UOS"
-		launch_alios 1 3 "64 448 8" 0x070F00 alios "AliaaG" $debug
+		launch_alios 1 2 "64 448 8" 0x070F00 alios "AliaaG" $debug
 		;;
 esac
 
