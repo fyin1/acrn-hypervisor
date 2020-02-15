@@ -18,8 +18,9 @@
 
 struct cat_hw_info cat_cap_info;
 const uint16_t hv_clos = 0U;
-static uint16_t platform_clos_num = MAX_PLATFORM_CLOS_NUM;
 
+#ifdef	CONFIG_CAT_ENABLED
+static uint16_t platform_clos_num = MAX_PLATFORM_CLOS_NUM;
 int32_t init_cat_cap_info(void)
 {
 	uint32_t eax = 0U, ebx = 0U, ecx = 0U, edx = 0U;
@@ -67,9 +68,20 @@ void setup_clos(uint16_t pcpu_id)
 
 	if (cat_cap_info.enabled) {
 		for (i = 0U; i < platform_clos_num; i++) {
-			msr_index = platform_clos_array[i].msr_index;
-			val = (uint64_t)platform_clos_array[i].clos_mask;
-			msr_write_pcpu(msr_index, val, pcpu_id);
+			switch (cat_cap_info.res_id) {
+			case CAT_RESID_L2:
+				msr_index = platform_l2_clos_array[i].msr_index;
+				val = (uint64_t)platform_l2_clos_array[i].clos_mask;
+				msr_write_pcpu(msr_index, val, pcpu_id);
+				break;
+			case CAT_RESID_L3:
+				msr_index = platform_l3_clos_array[i].msr_index;
+				val = (uint64_t)platform_l3_clos_array[i].clos_mask;
+				msr_write_pcpu(msr_index, val, pcpu_id);
+				break;
+			default:
+				pr_err("Invalid RDT resource configuration\n");
+			}
 		}
 		/* set hypervisor CAT clos */
 		msr_write_pcpu(MSR_IA32_PQR_ASSOC, clos2prq_msr(hv_clos), pcpu_id);
@@ -85,3 +97,20 @@ uint64_t clos2prq_msr(uint16_t clos)
 
 	return prq_assoc;
 }
+#else
+int32_t init_cat_cap_info(void)
+{
+	cat_cap_info.enabled = false;
+
+	return 0U;
+}
+
+void setup_clos(__unused uint16_t pcpu_id)
+{
+}
+
+uint64_t clos2prq_msr(__unused uint16_t clos)
+{
+	return 0UL;
+}
+#endif
