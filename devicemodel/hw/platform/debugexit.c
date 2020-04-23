@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <log.h>
 
 #include "types.h"
 #include "vmmapi.h"
@@ -41,6 +42,7 @@ static int
 debugexit_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
 	      uint32_t *eax, void *arg)
 {
+	pr_err("guest write exit register\n");
 	if (in)
 		*eax = 0xFFFF;
 	else {
@@ -55,6 +57,7 @@ init_debugexit(void)
 {
 	struct inout_port iop;
 
+	pr_err("init debugexit\n");
 	memset(&iop, 0, sizeof(struct inout_port));
 	iop.name = "debugexit";
 	iop.port = DEBUG_IO_BASE;

@@ -139,6 +139,7 @@ SRCS += core/sw_load_bzimage.c
 SRCS += core/sw_load_vsbl.c
 SRCS += core/sw_load_ovmf.c
 SRCS += core/sw_load_elf.c
+SRCS += core/sw_load_inmate.c
 SRCS += core/mevent.c
 SRCS += core/gc.c
 SRCS += core/pm.c

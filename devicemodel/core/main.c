@@ -80,6 +80,7 @@ char *vmname;
 char *guest_uuid_str;
 char *vsbl_file_name;
 char *ovmf_file_name;
+char *inmate_file_name;
 char *kernel_file_name;
 char *elf_file_name;
 uint8_t trusty_enabled;
@@ -733,6 +734,7 @@ enum {
 	CMD_OPT_PM_NOTIFY_CHANNEL,
 	CMD_OPT_PM_BY_VUART,
 	CMD_OPT_WINDOWS,
+	CMD_OPT_INMATE,
 };
 
 static struct option long_options[] = {
@@ -771,6 +773,7 @@ static struct option long_options[] = {
 	{"pm_notify_channel",	required_argument,	0, CMD_OPT_PM_NOTIFY_CHANNEL},
 	{"pm_by_vuart",	required_argument,	0, CMD_OPT_PM_BY_VUART},
 	{"windows",		no_argument,		0, CMD_OPT_WINDOWS},
+	{"inmate",		required_argument,	0, CMD_OPT_INMATE},
 	{0,			0,			0,  0  },
 };
 
@@ -873,6 +876,10 @@ main(int argc, char *argv[])
 			if (!vsbl_file_name && acrn_parse_ovmf(optarg) != 0)
 				errx(EX_USAGE, "invalid ovmf param %s", optarg);
 			skip_pci_mem64bar_workaround = true;
+			break;
+		case CMD_OPT_INMATE:
+			if (!inmate_file_name && (acrn_parse_inmate(optarg) != 0))
+				errx(EX_USAGE, "invalid inmate param %s", optarg);
 			break;
 		case CMD_OPT_PART_INFO:
 			if (acrn_parse_guest_part_info(optarg) != 0) {

@@ -292,6 +292,8 @@ acrn_sw_load(struct vmctx *ctx)
 		return acrn_sw_load_bzimage(ctx);
 	else if (elf_file_name)
 		return acrn_sw_load_elf(ctx);
+	else if (inmate_file_name)
+		return acrn_sw_load_inmate(ctx);
 	else
 		return -1;
 }
