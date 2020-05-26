@@ -37,6 +37,8 @@
 #include <sysexits.h>
 #include <stdbool.h>
 #include <getopt.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "vmmapi.h"
 #include "sw_load.h"
@@ -786,9 +788,10 @@ main(int argc, char *argv[])
 {
 	int c, error, ret=1;
 	int max_vcpus, mptgen;
-	struct vmctx *ctx;
+	struct vmctx *ctx = NULL;
 	size_t memsize;
 	int option_idx = 0;
+	struct rlimit core_limit;
 
 	progname = basename(argv[0]);
 	memsize = 256 * MB;
@@ -968,6 +971,12 @@ main(int argc, char *argv[])
 
 	for (;;) {
 		pr_notice("vm_create: %s\n", vmname);
+
+		/* To generate core file */
+		core_limit.rlim_cur = RLIM_INFINITY;
+		core_limit.rlim_max = RLIM_INFINITY;
+		setrlimit(RLIMIT_CORE, &core_limit);
+
 		ctx = vm_create(vmname, (unsigned long)vhm_req_buf, &guest_ncpus);
 		if (!ctx) {
 			pr_err("vm_create failed");
