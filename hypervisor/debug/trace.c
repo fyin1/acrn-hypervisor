@@ -41,24 +41,11 @@ struct trace_entry {
 	} payload;
 } __aligned(8);
 
-bool tracing_on = true;
-void trace_disable(void )
-{
-	tracing_on = false;
-}
-
-void trace_enable(void)
-{
-	tracing_on = true;
-}
-
 static inline bool trace_check(uint16_t cpu_id)
 {
 	if (per_cpu(sbuf, cpu_id)[ACRN_TRACE] == NULL) {
 		return false;
 	}
-	if (!tracing_on)
-		return false;
 
 	return true;
 }
