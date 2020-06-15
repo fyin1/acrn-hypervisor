@@ -13,6 +13,7 @@
 #include <cpu_caps.h>
 #include <per_cpu.h>
 #include <init.h>
+#include <trace.h>
 #include <vm.h>
 #include <vmcs.h>
 #include <mmu.h>

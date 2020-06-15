@@ -28,7 +28,9 @@ void vcpu_thread(struct thread_object *obj)
 
 		/* Don't open interrupt window between here and vmentry */
 		if (need_reschedule(pcpuid_from_vcpu(vcpu))) {
+			TRACE_2L(TRACE_SCHEDULE_OUT, SCHEDULE_OUT_MAIN, 0UL);
 			schedule();
+			TRACE_2L(TRACE_SCHEDULE_IN, SCHEDULE_OUT_MAIN, 0UL);
 		}
 
 		/* Check and process pending requests(including interrupt) */

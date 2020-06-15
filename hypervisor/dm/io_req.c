@@ -7,6 +7,7 @@
 #include <irq.h>
 #include <errno.h>
 #include <logmsg.h>
+#include <trace.h>
 
 #define DBG_LEVEL_IOREQ	6U
 
@@ -125,11 +126,15 @@ int32_t acrn_insert_request(struct acrn_vcpu *vcpu, const struct io_request *io_
 				}
 				asm_pause();
 				if (need_reschedule(pcpuid_from_vcpu(vcpu))) {
+					TRACE_2L(TRACE_SCHEDULE_OUT, SCHEDULE_OUT_IO, 0UL);
 					schedule();
+					TRACE_2L(TRACE_SCHEDULE_IN, SCHEDULE_OUT_IO, 0UL);
 				}
 			}
 		} else {
+			TRACE_2L(TRACE_SCHEDULE_OUT, SCHEDULE_OUT_IO, 0UL);
 			wait_event(&vcpu->events[VCPU_EVENT_IOREQ]);
+			TRACE_2L(TRACE_SCHEDULE_IN, SCHEDULE_OUT_IO, 0UL);
 		}
 	} else {
 		ret = -EINVAL;

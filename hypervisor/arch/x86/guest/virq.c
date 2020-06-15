@@ -375,7 +375,9 @@ int32_t acrn_handle_pending_request(struct acrn_vcpu *vcpu)
 		ret = -EFAULT;
 	} else {
 		if (bitmap_test_and_clear_lock(ACRN_REQUEST_WAIT_WBINVD, pending_req_bits)) {
+			TRACE_2L(TRACE_SCHEDULE_OUT, SCHEDULE_OUT_WBINVD, 0UL);
 			wait_event(&vcpu->events[VCPU_EVENT_SYNC_WBINVD]);
+			TRACE_2L(TRACE_SCHEDULE_IN, SCHEDULE_OUT_WBINVD, 0UL);
 		}
 
 		if (bitmap_test_and_clear_lock(ACRN_REQUEST_EPT_FLUSH, pending_req_bits)) {

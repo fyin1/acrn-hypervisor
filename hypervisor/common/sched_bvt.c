@@ -7,6 +7,7 @@
 #include <list.h>
 #include <per_cpu.h>
 #include <schedule.h>
+#include <trace.h>
 
 #define BVT_MCU_MS	1U
 /* context switch allowance */
@@ -131,10 +132,12 @@ static void sched_tick_handler(void *param)
 		if (!is_idle_thread(current)) {
 			data->run_countdown -= 1U;
 			if (data->run_countdown == 0U) {
+				TRACE_2L(TRACE_SCHEDULE_REQ, SCHEDULE_OUT_TICK_KICK, 0UL);
 				make_reschedule_request(pcpu_id, DEL_MODE_IPI);
 			}
 		} else {
 			if (!list_empty(&bvt_ctl->runqueue)) {
+				TRACE_2L(TRACE_SCHEDULE_REQ, SCHEDULE_OUT_VCPU_READY, 0UL);
 				make_reschedule_request(pcpu_id, DEL_MODE_IPI);
 			}
 		}

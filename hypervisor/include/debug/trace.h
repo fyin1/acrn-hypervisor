@@ -41,6 +41,23 @@
 
 #define TRACE_VMEXIT_UNHANDLED		0x20000U
 
+
+#define TRACE_SCHEDULE_EVENT		0x30000U
+#define	TRACE_SCHEDULE_OUT		0x30001U
+#define	TRACE_SCHEDULE_IN		0x30002U
+#define	TRACE_SCHEDULE_REQ		0x30003U
+
+#define	SCHEDULE_OUT_HLT		0x0U
+#define	SCHEDULE_OUT_IO			0x1U
+#define	SCHEDULE_OUT_TICK_KICK		0x2U
+#define	SCHEDULE_OUT_WBINVD		0x3U
+#define	SCHEDULE_OUT_PAGE_WALKER	0x4U
+#define	SCHEDULE_OUT_MAIN		0x5U
+#define	SCHEDULE_IDLE			0x6U
+#define	SCHEDULE_OUT_VCPU_READY		0x7U
+#define	SCHEDULE_SIGNAL_READY		0x8U
+
+
 void TRACE_2L(uint32_t evid, uint64_t e, uint64_t f);
 void TRACE_4I(uint32_t evid, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
 void TRACE_6C(uint32_t evid, uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4, uint8_t b1, uint8_t b2);

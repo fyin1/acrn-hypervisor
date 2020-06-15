@@ -15,6 +15,7 @@
 #include <assign.h>
 #include <ept.h>
 #include <mmu.h>
+#include <trace.h>
 #include <hypercall.h>
 #include <errno.h>
 #include <logmsg.h>
@@ -560,6 +561,7 @@ int32_t hcall_notify_ioreq_finish(uint16_t vmid, uint16_t vcpu_id)
 		} else {
 			vcpu = vcpu_from_vid(target_vm, vcpu_id);
 			if (!vcpu->vm->sw.is_polling_ioreq) {
+				TRACE_2L(TRACE_SCHEDULE_REQ, SCHEDULE_OUT_IO, 0UL);
 				signal_event(&vcpu->events[VCPU_EVENT_IOREQ]);
 			}
 			ret = 0;

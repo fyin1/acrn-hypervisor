@@ -10,6 +10,7 @@
 #include <cpu.h>
 #include <per_cpu.h>
 #include <lapic.h>
+#include <trace.h>
 #include <schedule.h>
 #include <sprintf.h>
 
@@ -225,6 +226,8 @@ void wake_thread(struct thread_object *obj)
 			scheduler->wake(obj);
 		}
 		set_thread_status(obj, THREAD_STS_RUNNABLE);
+
+		TRACE_2L(TRACE_SCHEDULE_REQ, SCHEDULE_SIGNAL_READY, 0UL);
 		make_reschedule_request(pcpu_id, DEL_MODE_IPI);
 	}
 	release_schedule_lock(pcpu_id, rflag);

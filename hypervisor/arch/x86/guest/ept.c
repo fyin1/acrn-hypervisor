@@ -250,7 +250,9 @@ void walk_ept_table(struct acrn_vm *vm, pge_handler cb)
 			 * Give chance to release CPU to make other threads happy.
 			 */
 			if (need_reschedule(get_pcpu_id())) {
+				TRACE_2L(TRACE_SCHEDULE_OUT, SCHEDULE_OUT_PAGE_WALKER, 0UL);
 				schedule();
+				TRACE_2L(TRACE_SCHEDULE_IN, SCHEDULE_OUT_PAGE_WALKER, 0UL);
 			}
 		}
 	}

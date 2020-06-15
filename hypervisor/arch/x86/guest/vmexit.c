@@ -288,7 +288,9 @@ static int32_t pause_vmexit_handler(__unused struct acrn_vcpu *vcpu)
 static int32_t hlt_vmexit_handler(struct acrn_vcpu *vcpu)
 {
 	if ((vcpu->arch.pending_req == 0UL) && (!vlapic_has_pending_intr(vcpu))) {
+		TRACE_2L(TRACE_SCHEDULE_OUT, SCHEDULE_OUT_HLT, 0UL);
 		wait_event(&vcpu->events[VCPU_EVENT_VIRTUAL_INTERRUPT]);
+		TRACE_2L(TRACE_SCHEDULE_IN, SCHEDULE_OUT_HLT, 0UL);
 	}
 	return 0;
 }
